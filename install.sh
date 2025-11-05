@@ -96,14 +96,14 @@ else
 fi
 
 # Clone repository
-INSTALL_DIR="$HOME/rexcloud"
+INSTALL_DIR="$HOME/RC-Dash"
 if [ -d "$INSTALL_DIR" ]; then
-    print_info "RexCloud directory already exists. Updating..."
+    print_info "RC-Dash directory already exists. Updating..."
     cd "$INSTALL_DIR"
     git pull
 else
-    print_info "Cloning RexCloud repository..."
-    git clone https://github.com/yourusername/rexcloud.git "$INSTALL_DIR"
+    print_info "Cloning RC-Dash repository..."
+    git clone https://github.com/yourusername/RC-Dash.git "$INSTALL_DIR"
     cd "$INSTALL_DIR"
 fi
 print_success "Repository ready"

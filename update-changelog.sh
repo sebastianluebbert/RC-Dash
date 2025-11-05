@@ -17,7 +17,7 @@ echo ""
 
 # Configuration
 CHANGELOG_FILE="CHANGELOG.md"
-REPO_URL="https://github.com/yourusername/rexcloud"
+REPO_URL="https://github.com/yourusername/RC-Dash"
 
 # Get all tags sorted by version
 TAGS=$(git tag -l --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' || echo "")

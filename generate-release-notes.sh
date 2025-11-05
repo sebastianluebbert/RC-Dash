@@ -240,7 +240,7 @@ fi
 cat >> "$OUTPUT_FILE" << EOF
 ---
 
-**Full Changelog**: https://github.com/yourusername/rexcloud/compare/${FROM_TAG}...${TO_TAG}
+**Full Changelog**: https://github.com/yourusername/RC-Dash/compare/${FROM_TAG}...${TO_TAG}
 EOF
 
 # Display results
