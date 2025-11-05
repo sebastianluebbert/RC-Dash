@@ -145,7 +145,16 @@ else
 fi
 
 # Load environment variables
-export $(grep -v '^#' .env | xargs)
+set -a
+source .env
+set +a
+
+# Verify critical environment variables are set
+if [ -z "$DB_PASSWORD" ] || [ -z "$JWT_SECRET" ] || [ -z "$ENCRYPTION_KEY" ]; then
+    print_error "Critical environment variables are not set in .env file"
+    echo "Please check your .env file and ensure DB_PASSWORD, JWT_SECRET, and ENCRYPTION_KEY are configured"
+    exit 1
+fi
 
 # Check Docker permissions
 if ! docker ps &> /dev/null; then
