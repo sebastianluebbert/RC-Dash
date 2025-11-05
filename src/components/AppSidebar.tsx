@@ -3,13 +3,9 @@ import {
   Server,
   Globe,
   Activity,
-  AlertTriangle,
   Settings,
   LifeBuoy,
-  FileText,
   Users,
-  CreditCard,
-  Database,
   Mail,
   LogOut,
   Globe as WebIcon,
@@ -19,8 +15,8 @@ import rexcloudLogo from "@/assets/rexcloud-logo.png";
 import proxmoxFavicon from "@/assets/proxmox-favicon.png";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
 import { proxmoxService } from "@/services/proxmox.service";
+import type { ProxmoxServer } from "@/types/server.types";
 
 import {
   Sidebar,
@@ -40,15 +36,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
-
-interface ServerData {
-  id: string;
-  vmid: number;
-  name: string;
-  node: string;
-  type: 'qemu' | 'lxc';
-  status: string;
-}
 
 const menuItems = [
   {
@@ -107,12 +94,12 @@ export function AppSidebar() {
   const location = useLocation();
   const { user, signOut } = useAuth();
 
-  const { data: servers } = useQuery({
+  const { data: servers } = useQuery<ProxmoxServer[]>({
     queryKey: ['servers'],
     queryFn: async () => {
       try {
         const data = await proxmoxService.getResources();
-        return data.servers as ServerData[];
+        return data.servers;
       } catch (error) {
         return [];
       }

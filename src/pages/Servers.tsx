@@ -9,47 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-
-interface ProxmoxServer {
-  id: string;
-  vmid: number;
-  name: string;
-  node: string;
-  type: 'qemu' | 'lxc';
-  status: string;
-}
-
-interface HetznerServer {
-  id: number;
-  name: string;
-  status: string;
-  server_type: {
-    name: string;
-    cores: number;
-    memory: number;
-    disk: number;
-  };
-  datacenter: {
-    name: string;
-    location: {
-      name: string;
-    };
-  };
-  public_net: {
-    ipv4: {
-      ip: string;
-    } | null;
-    ipv6?: {
-      ip: string;
-    } | null;
-  };
-}
+import type { ProxmoxServer, HetznerServer } from "@/types/server.types";
 
 const Servers = () => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useViewMode("servers-view-mode");
 
-  const { data: proxmoxServers } = useQuery({
+  const { data: proxmoxServers } = useQuery<ProxmoxServer[]>({
     queryKey: ['proxmox-servers'],
     queryFn: async () => {
       const response = await fetch(
@@ -61,21 +27,18 @@ const Servers = () => {
         }
       );
 
-      if (!response.ok) {
-        return [];
-      }
-
+      if (!response.ok) return [];
       const data = await response.json();
-      return data.servers as ProxmoxServer[];
+      return data.servers;
     },
   });
 
-  const { data: hetznerServers } = useQuery({
+  const { data: hetznerServers } = useQuery<HetznerServer[]>({
     queryKey: ['hetzner-cloud-servers'],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('hetzner-cloud-servers');
       if (error) throw error;
-      return data.servers as HetznerServer[];
+      return data.servers;
     },
   });
 

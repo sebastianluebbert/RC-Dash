@@ -11,15 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { proxmoxService } from "@/services/proxmox.service";
 import { dnsService } from "@/services/dns.service";
 import { useState, useEffect } from "react";
-
-interface Server {
-  id: string;
-  vmid: number;
-  name: string;
-  node: string;
-  type: 'qemu' | 'lxc';
-  status: string;
-}
+import type { ProxmoxServer } from "@/types/server.types";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -36,12 +28,12 @@ const Index = () => {
     }
   }, []);
 
-  const { data: servers } = useQuery({
+  const { data: servers } = useQuery<ProxmoxServer[]>({
     queryKey: ['servers'],
     queryFn: async () => {
       try {
         const data = await proxmoxService.getResources();
-        return data.servers as Server[];
+        return data.servers;
       } catch (error) {
         console.error('Failed to fetch servers:', error);
         return [];

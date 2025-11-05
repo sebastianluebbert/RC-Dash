@@ -23,21 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-interface MailServer {
-  id: string;
-  name: string;
-  host: string;
-  created_at: string;
-}
-
-interface PleskServer {
-  id: string;
-  name: string;
-  host: string;
-  port: number;
-  created_at: string;
-}
+import type { MailServer, PleskServer } from "@/types/server.types";
 
 const Settings = () => {
   const { toast } = useToast();
