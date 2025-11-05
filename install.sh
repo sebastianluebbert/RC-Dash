@@ -100,7 +100,10 @@ INSTALL_DIR="$HOME/RC-Dash"
 if [ -d "$INSTALL_DIR" ]; then
     print_info "RC-Dash directory already exists. Updating..."
     cd "$INSTALL_DIR"
-    git pull
+    
+    # Stash any local changes and pull latest version
+    git fetch origin
+    git reset --hard origin/main
 else
     print_info "Cloning RC-Dash repository..."
     git clone https://github.com/sebastianluebbert/RC-Dash.git "$INSTALL_DIR"
