@@ -61,17 +61,17 @@ export interface Changelog {
 }
 
 const getVersion = async (): Promise<VersionInfo> => {
-  const response = await apiClient.get('/api/system/version');
+  const response = await apiClient.get('/system/version');
   return response.data;
 };
 
 const checkForUpdates = async (): Promise<UpdateCheck> => {
-  const response = await apiClient.get('/api/system/check-update');
+  const response = await apiClient.get('/system/check-update');
   return response.data;
 };
 
 const performUpdate = async (): Promise<UpdateResponse> => {
-  const response = await apiClient.post('/api/system/update');
+  const response = await apiClient.post('/system/update');
   return response.data;
 };
 
@@ -80,12 +80,12 @@ const getChangelog = async (from?: string, to?: string): Promise<Changelog> => {
   if (from) params.append('from', from);
   if (to) params.append('to', to);
   
-  const response = await apiClient.get(`/api/system/changelog?${params.toString()}`);
+  const response = await apiClient.get(`/system/changelog?${params.toString()}`);
   return response.data;
 };
 
 const getTags = async (): Promise<TagsResponse> => {
-  const response = await apiClient.get('/api/system/tags');
+  const response = await apiClient.get('/system/tags');
   return response.data;
 };
 
