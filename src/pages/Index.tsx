@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Server, Globe, Activity, AlertTriangle, ChevronRight } from "lucide-react";
 import { DashboardCard } from "@/components/DashboardCard";
+import { SetupWizard } from "@/components/SetupWizard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { useViewMode } from "@/hooks/useViewMode";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { proxmoxService } from "@/services/proxmox.service";
 import { dnsService } from "@/services/dns.service";
+import { useState, useEffect } from "react";
 
 interface Server {
   id: string;
@@ -22,6 +24,17 @@ interface Server {
 const Index = () => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useViewMode("servers-view-mode");
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
+
+  // Check if setup was completed
+  useEffect(() => {
+    const setupCompleted = localStorage.getItem('rexcloud_setup_completed');
+    if (!setupCompleted) {
+      // Show wizard after a small delay for better UX
+      const timer = setTimeout(() => setShowSetupWizard(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const { data: servers } = useQuery({
     queryKey: ['servers'],
@@ -83,15 +96,21 @@ const Index = () => {
   const activeIssues = servers?.filter(s => s.status.toLowerCase() === 'stopped').length || 0;
 
   return (
-    <div className="flex-1 space-y-6 p-8">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Übersicht über Ihre Hosting-Infrastruktur
-        </p>
-      </div>
+    <>
+      <SetupWizard 
+        open={showSetupWizard} 
+        onClose={() => setShowSetupWizard(false)} 
+      />
+      
+      <div className="flex-1 space-y-6 p-8">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Übersicht über Ihre Hosting-Infrastruktur
+          </p>
+        </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <div className="cursor-pointer" onClick={() => navigate('/servers')}>
           <DashboardCard
             title="VMs & Container"
@@ -316,8 +335,9 @@ const Index = () => {
             ))}
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
