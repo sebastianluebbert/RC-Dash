@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 serve(async (req) => {
   const { headers } = req;
@@ -21,14 +22,24 @@ serve(async (req) => {
 
     console.log(`WebSocket proxy request for ${type} ${vmid} on node ${node}`);
 
-    // Get Proxmox credentials
-    const PROXMOX_HOST = Deno.env.get('PROXMOX_HOST');
-    const PROXMOX_USERNAME = Deno.env.get('PROXMOX_USERNAME');
-    const PROXMOX_PASSWORD = Deno.env.get('PROXMOX_PASSWORD');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (!PROXMOX_HOST || !PROXMOX_USERNAME || !PROXMOX_PASSWORD) {
-      return new Response('Proxmox credentials not configured', { status: 500 });
+    // Get Proxmox node configuration from database
+    const { data: nodeConfig, error: nodeError } = await supabase
+      .from('proxmox_nodes')
+      .select('*')
+      .eq('name', node)
+      .maybeSingle();
+
+    if (nodeError || !nodeConfig) {
+      return new Response('Proxmox node not found', { status: 500 });
     }
+
+    const PROXMOX_HOST = nodeConfig.host;
+    const PROXMOX_USERNAME = nodeConfig.username;
+    const PROXMOX_PASSWORD = nodeConfig.password;
 
     // Get auth ticket
     const authResponse = await fetch(`${PROXMOX_HOST}/api2/json/access/ticket`, {

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,13 +18,26 @@ serve(async (req) => {
       throw new Error('Missing required parameters: node, vmid, hostname, ostemplate');
     }
 
-    const PROXMOX_HOST = Deno.env.get('PROXMOX_HOST');
-    const PROXMOX_USERNAME = Deno.env.get('PROXMOX_USERNAME');
-    const PROXMOX_PASSWORD = Deno.env.get('PROXMOX_PASSWORD');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (!PROXMOX_HOST || !PROXMOX_USERNAME || !PROXMOX_PASSWORD) {
-      throw new Error('Proxmox credentials not configured');
+    // Get Proxmox node configuration from database
+    const { data: nodeConfig, error: nodeError } = await supabase
+      .from('proxmox_nodes')
+      .select('*')
+      .eq('name', node)
+      .maybeSingle();
+
+    if (nodeError) throw nodeError;
+    
+    if (!nodeConfig) {
+      throw new Error(`Proxmox Node '${node}' nicht gefunden.`);
     }
+
+    const PROXMOX_HOST = nodeConfig.host;
+    const PROXMOX_USERNAME = nodeConfig.username;
+    const PROXMOX_PASSWORD = nodeConfig.password;
 
     console.log(`Creating LXC ${vmid} (${hostname}) on node ${node}`);
 

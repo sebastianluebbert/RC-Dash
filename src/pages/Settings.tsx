@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2 } from "lucide-react";
 import { DNSProviderSettings } from "@/components/DNSProviderSettings";
+import { ProxmoxSettings } from "@/components/ProxmoxSettings";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,15 +20,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-interface ProxmoxNode {
-  id: string;
-  name: string;
-  host: string;
-  port: number;
-  realm: string;
-  verify_ssl: boolean;
-}
 
 interface MailServer {
   id: string;
@@ -47,17 +39,8 @@ interface PleskServer {
 const Settings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [deleteNodeId, setDeleteNodeId] = useState<string | null>(null);
   const [deleteMailServerId, setDeleteMailServerId] = useState<string | null>(null);
   const [deletePleskServerId, setDeletePleskServerId] = useState<string | null>(null);
-  const [newNode, setNewNode] = useState({
-    name: "",
-    host: "",
-    port: 8006,
-    username: "",
-    password: "",
-    realm: "pam",
-  });
   const [newMailServer, setNewMailServer] = useState({
     name: "",
     host: "",
@@ -205,118 +188,6 @@ const Settings = () => {
     },
   });
 
-  const { data: nodes, isLoading } = useQuery({
-    queryKey: ['proxmox-nodes'],
-    queryFn: async () => {
-      // Get actual servers from the servers table that are synced from Proxmox
-      const { data, error } = await supabase
-        .from('servers')
-        .select('node')
-        .order('node');
-      
-      if (error) throw error;
-      
-      // Get unique nodes
-      const uniqueNodes = Array.from(new Set(data.map(s => s.node)));
-      
-      // Return node info - in reality these come from PROXMOX_* secrets
-      return uniqueNodes.map(node => ({
-        id: node,
-        name: node,
-        host: 'Configured via Secrets',
-        port: 8006,
-        realm: 'pam',
-        verify_ssl: false,
-      })) as ProxmoxNode[];
-    },
-  });
-
-  const addNodeMutation = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase
-        .from('proxmox_nodes')
-        .insert([{
-          name: newNode.name,
-          host: newNode.host,
-          port: newNode.port,
-          realm: newNode.realm,
-          verify_ssl: false,
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Store credentials as secrets
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proxmox-store-credentials`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            nodeName: newNode.name,
-            username: newNode.username,
-            password: newNode.password,
-          }),
-        }
-      );
-
-      if (!response.ok) throw new Error('Failed to store credentials');
-
-      return data;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Server hinzugefügt",
-        description: "Der Proxmox-Server wurde erfolgreich hinzugefügt",
-      });
-      queryClient.invalidateQueries({ queryKey: ['proxmox-nodes'] });
-      setNewNode({
-        name: "",
-        host: "",
-        port: 8006,
-        username: "",
-        password: "",
-        realm: "pam",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Fehler",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteNodeMutation = useMutation({
-    mutationFn: async (nodeId: string) => {
-      const { error } = await supabase
-        .from('proxmox_nodes')
-        .delete()
-        .eq('id', nodeId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Server gelöscht",
-        description: "Der Proxmox-Server wurde erfolgreich entfernt",
-      });
-      queryClient.invalidateQueries({ queryKey: ['proxmox-nodes'] });
-      setDeleteNodeId(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Fehler",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
   return (
     <div className="flex-1 space-y-6 p-8">
@@ -336,72 +207,7 @@ const Settings = () => {
         </TabsList>
 
         <TabsContent value="proxmox" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Proxmox Konfiguration</CardTitle>
-              <CardDescription>
-                Die Proxmox-Verbindung wird über Lovable Cloud Secrets verwaltet
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg space-y-2">
-                <p className="text-sm font-medium">Konfigurierte Secrets:</p>
-                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                  <li>PROXMOX_HOST - Proxmox Server URL</li>
-                  <li>PROXMOX_USERNAME - API Benutzername</li>
-                  <li>PROXMOX_PASSWORD - API Passwort</li>
-                </ul>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Diese Konfiguration ermöglicht die Verbindung zu Ihrem Proxmox-Server. 
-                Um die Verbindung zu ändern, aktualisieren Sie die entsprechenden Secrets in den Lovable Cloud-Einstellungen.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Konfigurierte Server</CardTitle>
-              <CardDescription>
-                Server werden über die PROXMOX_HOST, PROXMOX_USERNAME und PROXMOX_PASSWORD Secrets verwaltet
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="text-center text-muted-foreground">Lade Server...</div>
-              ) : nodes && nodes.length > 0 ? (
-                <div className="space-y-4">
-                  {nodes.map((node) => (
-                    <div
-                      key={node.id}
-                      className="flex items-center justify-between rounded-lg border border-border p-4"
-                    >
-                      <div>
-                        <h3 className="font-semibold">{node.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Verbunden über Proxmox API Secrets
-                        </p>
-                      </div>
-                      <div className="text-sm text-green-600 dark:text-green-400">
-                        ✓ Aktiv
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center text-muted-foreground py-8">
-                  Keine Server gefunden. Stellen Sie sicher, dass PROXMOX_HOST, PROXMOX_USERNAME und PROXMOX_PASSWORD als Secrets konfiguriert sind.
-                </div>
-              )}
-              <div className="mt-4 p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Hinweis:</strong> Die Proxmox-Verbindung wird über Secrets verwaltet. 
-                  Um einen neuen Server hinzuzufügen oder die Konfiguration zu ändern, aktualisieren Sie die 
-                  PROXMOX_HOST, PROXMOX_USERNAME und PROXMOX_PASSWORD Secrets in den Lovable Cloud-Einstellungen.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <ProxmoxSettings />
         </TabsContent>
 
         <TabsContent value="mail" className="space-y-6">
@@ -605,26 +411,6 @@ const Settings = () => {
           <DNSProviderSettings />
         </TabsContent>
       </Tabs>
-
-      <AlertDialog open={!!deleteNodeId} onOpenChange={() => setDeleteNodeId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Server löschen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sind Sie sicher, dass Sie diesen Server entfernen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteNodeId && deleteNodeMutation.mutate(deleteNodeId)}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Löschen
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <AlertDialog open={!!deleteMailServerId} onOpenChange={() => setDeleteMailServerId(null)}>
         <AlertDialogContent>

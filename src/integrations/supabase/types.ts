@@ -172,9 +172,11 @@ export type Database = {
           host: string
           id: string
           name: string
+          password: string
           port: number
           realm: string
           updated_at: string
+          username: string
           verify_ssl: boolean
         }
         Insert: {
@@ -182,9 +184,11 @@ export type Database = {
           host: string
           id?: string
           name: string
+          password?: string
           port?: number
           realm?: string
           updated_at?: string
+          username?: string
           verify_ssl?: boolean
         }
         Update: {
@@ -192,9 +196,11 @@ export type Database = {
           host?: string
           id?: string
           name?: string
+          password?: string
           port?: number
           realm?: string
           updated_at?: string
+          username?: string
           verify_ssl?: boolean
         }
         Relationships: []

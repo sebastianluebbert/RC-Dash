@@ -1,24 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-interface ProxmoxResource {
-  vmid: number;
-  name: string;
-  node: string;
-  type: 'qemu' | 'lxc';
-  status: string;
-  cpu?: number;
-  mem?: number;
-  maxmem?: number;
-  disk?: number;
-  maxdisk?: number;
-  uptime?: number;
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -26,69 +12,81 @@ serve(async (req) => {
   }
 
   try {
-    const PROXMOX_HOST = Deno.env.get('PROXMOX_HOST');
-    const PROXMOX_USERNAME = Deno.env.get('PROXMOX_USERNAME');
-    const PROXMOX_PASSWORD = Deno.env.get('PROXMOX_PASSWORD');
-
-    if (!PROXMOX_HOST || !PROXMOX_USERNAME || !PROXMOX_PASSWORD) {
-      throw new Error('Proxmox credentials not configured');
-    }
-
-    console.log('Connecting to Proxmox:', PROXMOX_HOST);
-
-    // Get auth ticket
-    const authResponse = await fetch(`${PROXMOX_HOST}/api2/json/access/ticket`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        username: PROXMOX_USERNAME,
-        password: PROXMOX_PASSWORD,
-      }),
-    });
-
-    if (!authResponse.ok) {
-      const errorText = await authResponse.text();
-      console.error('Proxmox auth failed:', errorText);
-      throw new Error(`Proxmox authentication failed: ${authResponse.status}`);
-    }
-
-    const authData = await authResponse.json();
-    const ticket = authData.data.ticket;
-    const csrfToken = authData.data.CSRFPreventionToken;
-
-    console.log('Proxmox authenticated successfully');
-
-    // Get cluster resources
-    const resourcesResponse = await fetch(`${PROXMOX_HOST}/api2/json/cluster/resources`, {
-      headers: {
-        'Cookie': `PVEAuthCookie=${ticket}`,
-        'CSRFPreventionToken': csrfToken,
-      },
-    });
-
-    if (!resourcesResponse.ok) {
-      throw new Error(`Failed to fetch resources: ${resourcesResponse.status}`);
-    }
-
-    const resourcesData = await resourcesResponse.json();
-    const resources = resourcesData.data as ProxmoxResource[];
-
-    console.log('Found resources:', resources.length);
-
-    // Filter for VMs and Containers only
-    const vms = resources.filter(r => r.type === 'qemu' || r.type === 'lxc');
-
-    console.log('VMs and Containers:', vms.length);
-
-    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Get all Proxmox nodes from database
+    const { data: nodes, error: nodesError } = await supabase
+      .from('proxmox_nodes')
+      .select('*');
+
+    if (nodesError) throw nodesError;
+    
+    if (!nodes || nodes.length === 0) {
+      throw new Error('Keine Proxmox-Server konfiguriert. Bitte fügen Sie einen Server in den Einstellungen hinzu.');
+    }
+
+    console.log(`Found ${nodes.length} Proxmox nodes`);
+    
+    const allVMs: any[] = [];
+
+    // Process each node
+    for (const node of nodes) {
+      const PROXMOX_HOST = node.host;
+      const PROXMOX_USERNAME = node.username;
+      const PROXMOX_PASSWORD = node.password;
+
+      console.log(`Processing node: ${node.name} at ${PROXMOX_HOST}`);
+
+      // Get auth ticket for this node
+      const authResponse = await fetch(`${PROXMOX_HOST}/api2/json/access/ticket`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          username: PROXMOX_USERNAME,
+          password: PROXMOX_PASSWORD,
+        }),
+      });
+
+      if (!authResponse.ok) {
+        console.error(`Authentication failed for node ${node.name}: ${authResponse.status}`);
+        continue;
+      }
+
+      const authData = await authResponse.json();
+      const ticket = authData.data.ticket;
+
+      // Get cluster resources for this node
+      console.log(`Fetching resources from ${node.name}`);
+      const resourcesResponse = await fetch(`${PROXMOX_HOST}/api2/json/cluster/resources`, {
+        headers: {
+          'Cookie': `PVEAuthCookie=${ticket}`,
+        },
+      });
+
+      if (!resourcesResponse.ok) {
+        console.error(`Failed to fetch resources from ${node.name}: ${resourcesResponse.status}`);
+        continue;
+      }
+
+      const resourcesData = await resourcesResponse.json();
+      const resources = resourcesData.data || [];
+      
+      // Filter for VMs and Containers from this node
+      const nodeVMs = resources.filter((r: any) => 
+        (r.type === 'qemu' || r.type === 'lxc') && r.node === node.name
+      );
+      
+      allVMs.push(...nodeVMs);
+    }
+
+    console.log(`Total resources found: ${allVMs.length}`);
+
     // Update or insert servers
-    const serverUpdates = vms.map(vm => ({
+    const serverUpdates = allVMs.map((vm: any) => ({
       vmid: vm.vmid,
       name: vm.name || `VM-${vm.vmid}`,
       node: vm.node,
