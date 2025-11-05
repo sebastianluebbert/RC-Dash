@@ -18,6 +18,9 @@ RUN npm run build
 # Production image
 FROM node:18-alpine
 
+# Install git for version management
+RUN apk add --no-cache git
+
 WORKDIR /app
 
 # Copy package files
@@ -30,9 +33,14 @@ RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src/database/schema.sql ./dist/database/
 
+# Copy git repository for version info
+COPY .git ./.git
+COPY package.json ./package.json
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
 
 USER nodejs
 
