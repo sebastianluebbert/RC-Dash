@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2 } from "lucide-react";
+import { proxmoxService, ProxmoxNode } from "@/services/proxmox.service";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,16 +17,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-interface ProxmoxNode {
-  id: string;
-  name: string;
-  host: string;
-  port: number;
-  username: string;
-  realm: string;
-  verify_ssl: boolean;
-}
 
 export const ProxmoxSettings = () => {
   const { toast } = useToast();
@@ -44,41 +34,21 @@ export const ProxmoxSettings = () => {
   const { data: nodes, isLoading } = useQuery({
     queryKey: ['proxmox-nodes'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('proxmox_nodes')
-        .select('id, name, host, port, username, realm, verify_ssl')
-        .order('name');
-      
-      if (error) throw error;
-      return data as ProxmoxNode[];
+      return await proxmoxService.getNodes();
     },
   });
 
   const addNodeMutation = useMutation({
     mutationFn: async () => {
-      // Encrypt password before storing
-      const { data: encryptedPassword, error: encryptError } = await supabase
-        .rpc('encrypt_value', { plain_text: newNode.password });
-
-      if (encryptError) throw encryptError;
-
-      const { data, error } = await supabase
-        .from('proxmox_nodes')
-        .insert([{
-          name: newNode.name,
-          host: newNode.host,
-          port: newNode.port,
-          username: newNode.username,
-          password_encrypted: encryptedPassword,
-          is_encrypted: true,
-          realm: newNode.realm,
-          verify_ssl: false,
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      return await proxmoxService.addNode({
+        name: newNode.name,
+        host: newNode.host,
+        port: newNode.port,
+        username: newNode.username,
+        password: newNode.password,
+        realm: newNode.realm,
+        verify_ssl: false,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['proxmox-nodes'] });
@@ -106,12 +76,7 @@ export const ProxmoxSettings = () => {
 
   const deleteNodeMutation = useMutation({
     mutationFn: async (nodeId: string) => {
-      const { error } = await supabase
-        .from('proxmox_nodes')
-        .delete()
-        .eq('id', nodeId);
-
-      if (error) throw error;
+      return await proxmoxService.deleteNode(nodeId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['proxmox-nodes'] });

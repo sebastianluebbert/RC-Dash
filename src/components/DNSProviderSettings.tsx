@@ -1,19 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Save, Eye, EyeOff } from "lucide-react";
-
-interface APISettings {
-  hetzner_api_key?: string;
-  autodns_user?: string;
-  autodns_password?: string;
-  autodns_context?: string;
-}
+import { dnsService } from "@/services/dns.service";
+import { settingsService } from "@/services/settings.service";
 
 export const DNSProviderSettings = () => {
   const { toast } = useToast();
@@ -26,48 +20,33 @@ export const DNSProviderSettings = () => {
   const [autodnsPassword, setAutodnsPassword] = useState("");
   const [autodnsContext, setAutodnsContext] = useState("");
 
-  const { data: settings, isLoading } = useQuery({
+  const { isLoading } = useQuery({
     queryKey: ['dns-settings'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('application_settings')
-        .select('*')
-        .in('key', ['hetzner_api_key', 'autodns_credentials']);
-      
-      if (error) throw error;
-      
-      const hetznerSetting = data?.find(s => s.key === 'hetzner_api_key');
-      const autodnsSetting = data?.find(s => s.key === 'autodns_credentials');
-      
-      // Decrypt values if encrypted
-      if (hetznerSetting?.is_encrypted && hetznerSetting?.value_encrypted) {
-        const { data: decrypted } = await supabase
-          .rpc('decrypt_value', { encrypted_text: hetznerSetting.value_encrypted });
-        if (decrypted) setHetznerKey(decrypted);
-      } else if (hetznerSetting?.value) {
-        setHetznerKey(hetznerSetting.value as string);
+      try {
+        // Fetch Hetzner API Key
+        const hetznerData = await settingsService.getSetting('hetzner_api_key');
+        if (hetznerData?.value) {
+          setHetznerKey(hetznerData.value);
+        }
+      } catch (error) {
+        // Setting doesn't exist yet
       }
-      
-      if (autodnsSetting?.is_encrypted && autodnsSetting?.value_encrypted) {
-        const { data: decrypted } = await supabase
-          .rpc('decrypt_value', { encrypted_text: autodnsSetting.value_encrypted });
-        if (decrypted) {
-          const creds = JSON.parse(decrypted);
-          setAutodnsUser(creds.user || '');
+
+      try {
+        // Fetch AutoDNS Credentials
+        const autodnsData = await settingsService.getSetting('autodns_credentials');
+        if (autodnsData?.value) {
+          const creds = JSON.parse(autodnsData.value);
+          setAutodnsUser(creds.username || '');
           setAutodnsPassword(creds.password || '');
           setAutodnsContext(creds.context || '');
         }
-      } else if (autodnsSetting?.value) {
-        const creds = autodnsSetting.value as any;
-        setAutodnsUser(creds.user || '');
-        setAutodnsPassword(creds.password || '');
-        setAutodnsContext(creds.context || '');
+      } catch (error) {
+        // Setting doesn't exist yet
       }
-      
-      return {
-        hetzner: hetznerSetting,
-        autodns: autodnsSetting,
-      };
+
+      return true;
     },
   });
 
@@ -76,40 +55,7 @@ export const DNSProviderSettings = () => {
       if (!hetznerKey) {
         throw new Error('API Key darf nicht leer sein');
       }
-
-      // Encrypt the API key
-      const { data: encryptedKey, error: encryptError } = await supabase
-        .rpc('encrypt_value', { plain_text: hetznerKey });
-
-      if (encryptError) throw encryptError;
-
-      const { data: existing } = await supabase
-        .from('application_settings')
-        .select('id')
-        .eq('key', 'hetzner_api_key')
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from('application_settings')
-          .update({ 
-            value_encrypted: encryptedKey,
-            is_encrypted: true 
-          })
-          .eq('key', 'hetzner_api_key');
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('application_settings')
-          .insert({
-            key: 'hetzner_api_key',
-            value: '' as any, // Dummy value for backward compatibility
-            value_encrypted: encryptedKey,
-            is_encrypted: true,
-            description: 'Hetzner Cloud API Key (encrypted)',
-          });
-        if (error) throw error;
-      }
+      return await dnsService.saveHetznerApiKey(hetznerKey);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dns-settings'] });
@@ -132,46 +78,7 @@ export const DNSProviderSettings = () => {
       if (!autodnsUser || !autodnsPassword || !autodnsContext) {
         throw new Error('Alle Felder müssen ausgefüllt sein');
       }
-
-      const credentials = {
-        user: autodnsUser,
-        password: autodnsPassword,
-        context: autodnsContext,
-      };
-
-      // Encrypt the credentials
-      const { data: encryptedCreds, error: encryptError } = await supabase
-        .rpc('encrypt_value', { plain_text: JSON.stringify(credentials) });
-
-      if (encryptError) throw encryptError;
-
-      const { data: existing } = await supabase
-        .from('application_settings')
-        .select('id')
-        .eq('key', 'autodns_credentials')
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from('application_settings')
-          .update({
-            value_encrypted: encryptedCreds,
-            is_encrypted: true,
-          })
-          .eq('key', 'autodns_credentials');
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('application_settings')
-          .insert({
-            key: 'autodns_credentials',
-            value: {} as any, // Dummy value for backward compatibility
-            value_encrypted: encryptedCreds,
-            is_encrypted: true,
-            description: 'AutoDNS API Credentials (encrypted)',
-          });
-        if (error) throw error;
-      }
+      return await dnsService.saveAutoDNSCredentials(autodnsUser, autodnsPassword, autodnsContext);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dns-settings'] });

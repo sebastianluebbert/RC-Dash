@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import apiClient from "@/lib/api-client";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -18,19 +18,10 @@ const Auth = () => {
 
   useEffect(() => {
     // Check if user is already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/");
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate("/");
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      navigate("/");
+    }
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -38,21 +29,26 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const response = await apiClient.post('/auth/login', {
         email: loginData.email,
         password: loginData.password,
       });
 
-      if (error) throw error;
+      const { token, user } = response.data;
+      
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('user', JSON.stringify(user));
 
       toast({
         title: "Erfolgreich angemeldet",
         description: "Willkommen zurück!",
       });
+
+      navigate("/");
     } catch (error: any) {
       toast({
         title: "Login fehlgeschlagen",
-        description: error.message || "Bitte überprüfe deine Anmeldedaten.",
+        description: error.response?.data?.error || "Bitte überprüfe deine Anmeldedaten.",
         variant: "destructive",
       });
     } finally {
@@ -84,29 +80,29 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { error } = await supabase.auth.signUp({
+      const response = await apiClient.post('/auth/register', {
         email: signupData.email,
         password: signupData.password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            username: signupData.username,
-          },
-        },
+        username: signupData.username,
       });
 
-      if (error) throw error;
+      const { token, user } = response.data;
+      
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('user', JSON.stringify(user));
 
       toast({
         title: "Registrierung erfolgreich",
-        description: "Du wirst automatisch angemeldet.",
+        description: user.isAdmin 
+          ? "Du wurdest als Administrator registriert!" 
+          : "Willkommen bei RexCloud!",
       });
+
+      navigate("/");
     } catch (error: any) {
       toast({
         title: "Registrierung fehlgeschlagen",
-        description: error.message || "Bitte versuche es erneut.",
+        description: error.response?.data?.error || "Bitte versuche es erneut.",
         variant: "destructive",
       });
     } finally {

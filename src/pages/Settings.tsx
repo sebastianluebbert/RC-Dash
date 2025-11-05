@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { mailService } from "@/services/mail.service";
+import { pleskService } from "@/services/plesk.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,38 +58,24 @@ const Settings = () => {
   const { data: mailServers, isLoading: mailServersLoading } = useQuery({
     queryKey: ['mailcow-servers'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('mailcow_servers')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      return data as MailServer[];
+      return await mailService.getServers();
     },
   });
 
   const { data: pleskServers, isLoading: pleskServersLoading } = useQuery({
     queryKey: ['plesk-servers'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('plesk_servers')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      return data as PleskServer[];
+      return await pleskService.getServers();
     },
   });
 
   const addMailServerMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('mailcow-store-credentials', {
-        body: {
-          name: newMailServer.name,
-          host: newMailServer.host,
-          apiKey: newMailServer.apiKey,
-        },
+      return await mailService.addServer({
+        name: newMailServer.name,
+        host: newMailServer.host,
+        apiKey: newMailServer.apiKey,
       });
-      if (error) throw error;
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mailcow-servers'] });
@@ -109,11 +96,7 @@ const Settings = () => {
 
   const deleteMailServerMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('mailcow_servers')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
+      return await mailService.deleteServer(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mailcow-servers'] });
@@ -134,17 +117,13 @@ const Settings = () => {
 
   const addPleskServerMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('plesk-store-credentials', {
-        body: {
-          name: newPleskServer.name,
-          host: newPleskServer.host,
-          username: newPleskServer.username,
-          password: newPleskServer.password,
-          port: newPleskServer.port,
-        },
+      return await pleskService.addServer({
+        name: newPleskServer.name,
+        host: newPleskServer.host,
+        username: newPleskServer.username,
+        password: newPleskServer.password,
+        port: newPleskServer.port,
       });
-      if (error) throw error;
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plesk-servers'] });
@@ -165,11 +144,7 @@ const Settings = () => {
 
   const deletePleskServerMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('plesk_servers')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
+      return await pleskService.deleteServer(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plesk-servers'] });

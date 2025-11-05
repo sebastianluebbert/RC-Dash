@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { ViewToggle } from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
+import { proxmoxService } from "@/services/proxmox.service";
+import { dnsService } from "@/services/dns.service";
 
 interface Server {
   id: string;
@@ -25,36 +26,30 @@ const Index = () => {
   const { data: servers } = useQuery({
     queryKey: ['servers'],
     queryFn: async () => {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proxmox-resources`,
-        {
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
+      try {
+        const data = await proxmoxService.getResources();
+        return data.servers as Server[];
+      } catch (error) {
+        console.error('Failed to fetch servers:', error);
         return [];
       }
-
-      const data = await response.json();
-      return data.servers as Server[];
     },
   });
 
   const { data: allZones } = useQuery({
     queryKey: ["all-zones"],
     queryFn: async () => {
-      const [hetznerResponse, autodnsResponse] = await Promise.all([
-        supabase.functions.invoke("hetzner-zones"),
-        supabase.functions.invoke("autodns-zones"),
-      ]);
-
-      const hetznerZones = hetznerResponse.data?.zones || [];
-      const autodnsZones = autodnsResponse.data?.zones || [];
-      
-      return [...hetznerZones, ...autodnsZones];
+      try {
+        const [hetznerZones, autodnsZones] = await Promise.all([
+          dnsService.getHetznerZones().catch(() => []),
+          dnsService.getAutoDNSZones().catch(() => []),
+        ]);
+        
+        return [...hetznerZones, ...autodnsZones];
+      } catch (error) {
+        console.error('Failed to fetch DNS zones:', error);
+        return [];
+      }
     },
   });
 
