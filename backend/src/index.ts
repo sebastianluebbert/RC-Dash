@@ -13,6 +13,7 @@ import { hetznerRouter } from './routes/hetzner';
 import { vncRouter } from './routes/vnc';
 import { scriptsRouter } from './routes/scripts';
 import { customersRouter } from './routes/customers';
+import { systemRouter } from './routes/system';
 import { errorHandler } from './middleware/errorHandler';
 import { initDatabase } from './database/init';
 
@@ -56,6 +57,7 @@ app.use('/api/hetzner', hetznerRouter);
 app.use('/api/vnc', vncRouter);
 app.use('/api/scripts', scriptsRouter);
 app.use('/api/customers', customersRouter);
+app.use('/api/system', systemRouter);
 
 // Error handling
 app.use(errorHandler);

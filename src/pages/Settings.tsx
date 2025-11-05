@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2 } from "lucide-react";
 import { DNSProviderSettings } from "@/components/DNSProviderSettings";
 import { ProxmoxSettings } from "@/components/ProxmoxSettings";
+import { SystemUpdate } from "@/components/SystemUpdate";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -179,6 +180,7 @@ const Settings = () => {
           <TabsTrigger value="mail">Mail Server</TabsTrigger>
           <TabsTrigger value="plesk">Plesk Server</TabsTrigger>
           <TabsTrigger value="dns">DNS Provider</TabsTrigger>
+          <TabsTrigger value="system">System-Updates</TabsTrigger>
         </TabsList>
 
         <TabsContent value="proxmox" className="space-y-6">
@@ -384,6 +386,10 @@ const Settings = () => {
 
         <TabsContent value="dns" className="space-y-6">
           <DNSProviderSettings />
+        </TabsContent>
+
+        <TabsContent value="system" className="space-y-6">
+          <SystemUpdate />
         </TabsContent>
       </Tabs>
 
