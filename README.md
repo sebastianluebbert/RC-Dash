@@ -85,6 +85,24 @@ http://localhost
 http://your-server-ip
 ```
 
+### Updating RexCloud
+
+Use the automated update script:
+
+```bash
+cd rexcloud
+chmod +x update.sh
+./update.sh
+```
+
+The update script automatically:
+- Backs up your configuration
+- Pulls latest changes from Git
+- Rebuilds Docker containers
+- Runs database migrations
+- Restarts all services
+- Cleans up old Docker images
+
 ### Managing the Application
 
 ```bash
@@ -103,11 +121,6 @@ docker-compose stop
 
 # Start application
 docker-compose start
-
-# Rebuild after updates
-git pull
-docker-compose build --no-cache
-docker-compose up -d
 ```
 
 ### Database Management

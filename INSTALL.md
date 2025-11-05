@@ -340,6 +340,24 @@ sudo chown -R $USER:$USER ~/rexcloud
 
 ### Update RexCloud
 
+Use the automated update script:
+
+```bash
+cd rexcloud
+chmod +x update.sh
+./update.sh
+```
+
+The update script will:
+- Backup your current `.env` file
+- Pull the latest changes from Git
+- Rebuild Docker containers
+- Run database migrations
+- Restart all services
+- Clean up old Docker images
+
+Or update manually:
+
 ```bash
 cd rexcloud
 git pull
