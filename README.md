@@ -144,6 +144,40 @@ docker-compose exec -T postgres psql -U rexcloud rexcloud < backup.sql
 4. **Regular Updates**: Keep Docker images and system updated
 5. **Backups**: Regular database and configuration backups
 
+## 📋 Development
+
+### Versioning
+
+RexCloud uses [Semantic Versioning](https://semver.org/) and [Conventional Commits](https://www.conventionalcommits.org/).
+
+#### Creating a New Version
+
+```bash
+# Make your changes and commit using conventional commits
+git commit -m "feat: add new feature"
+git commit -m "fix: resolve bug"
+
+# Run auto-versioning script
+chmod +x create-version.sh
+./create-version.sh
+```
+
+The script automatically:
+- Analyzes commits since last version
+- Determines version bump (major/minor/patch)
+- Generates release notes
+- Creates Git tag
+- Pushes to remote (optional)
+
+#### Commit Message Format
+
+- `feat:` - New feature (minor version bump)
+- `fix:` - Bug fix (patch version bump)
+- `feat!:` or `BREAKING CHANGE:` - Breaking change (major version bump)
+- `docs:`, `style:`, `refactor:`, etc. - No version bump
+
+See [CONVENTIONAL_COMMITS.md](CONVENTIONAL_COMMITS.md) for detailed guide.
+
 ## 🔄 Updates
 
 ```bash

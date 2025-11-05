@@ -366,6 +366,23 @@ docker-compose up -d
 docker-compose exec backend npm run migrate:build
 ```
 
+### Create Version Tags
+
+RexCloud uses automatic versioning based on [Conventional Commits](../CONVENTIONAL_COMMITS.md):
+
+```bash
+# After making commits, create a new version
+chmod +x create-version.sh
+./create-version.sh
+```
+
+The script analyzes your commits and creates appropriate version tags:
+- `feat:` commits → minor version bump (0.x.0)
+- `fix:` commits → patch version bump (0.0.x)
+- `BREAKING CHANGE:` → major version bump (x.0.0)
+
+See [CONVENTIONAL_COMMITS.md](../CONVENTIONAL_COMMITS.md) for detailed versioning guide.
+
 ### Backup Database
 
 ```bash
