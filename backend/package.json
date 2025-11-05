@@ -7,7 +7,8 @@
     "dev": "nodemon --exec ts-node src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "migrate": "node dist/database/migrate.js"
+    "migrate": "ts-node src/database/migrate.ts",
+    "migrate:build": "node dist/database/migrate.js"
   },
   "keywords": ["proxmox", "hetzner", "plesk", "mailcow", "management"],
   "author": "",
