@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import apiClient from "@/lib/api-client";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -18,10 +18,13 @@ const Auth = () => {
 
   useEffect(() => {
     // Check if user is already logged in
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      navigate("/");
-    }
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/");
+      }
+    };
+    checkUser();
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -29,15 +32,12 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const response = await apiClient.post('/auth/login', {
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: loginData.email,
         password: loginData.password,
       });
 
-      const { token, user } = response.data;
-      
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      if (error) throw error;
 
       toast({
         title: "Erfolgreich angemeldet",
@@ -48,7 +48,7 @@ const Auth = () => {
     } catch (error: any) {
       toast({
         title: "Login fehlgeschlagen",
-        description: error.response?.data?.error || "Bitte überprüfe deine Anmeldedaten.",
+        description: error.message || "Bitte überprüfe deine Anmeldedaten.",
         variant: "destructive",
       });
     } finally {
@@ -80,29 +80,29 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const response = await apiClient.post('/auth/register', {
+      const { data, error } = await supabase.auth.signUp({
         email: signupData.email,
         password: signupData.password,
-        username: signupData.username,
+        options: {
+          data: {
+            username: signupData.username,
+          },
+          emailRedirectTo: `${window.location.origin}/`,
+        },
       });
 
-      const { token, user } = response.data;
-      
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      if (error) throw error;
 
       toast({
         title: "Registrierung erfolgreich",
-        description: user.isAdmin 
-          ? "Du wurdest als Administrator registriert!" 
-          : "Willkommen bei RexCloud!",
+        description: "Bitte bestätige deine E-Mail-Adresse.",
       });
 
-      navigate("/");
+      // User can log in after email confirmation
     } catch (error: any) {
       toast({
         title: "Registrierung fehlgeschlagen",
-        description: error.response?.data?.error || "Bitte versuche es erneut.",
+        description: error.message || "Bitte versuche es erneut.",
         variant: "destructive",
       });
     } finally {
