@@ -210,9 +210,30 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 echo ""
+
+# Update CHANGELOG.md
+read -p "Update CHANGELOG.md? (Y/n) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+  if [ -f "update-changelog.sh" ]; then
+    chmod +x update-changelog.sh
+    ./update-changelog.sh
+    
+    # Stage CHANGELOG.md if updated
+    if [ -f "CHANGELOG.md" ] && ! git diff --quiet CHANGELOG.md 2>/dev/null; then
+      git add CHANGELOG.md
+      git commit -m "docs: update CHANGELOG.md for ${NEW_TAG}"
+      echo -e "${GREEN}✅ CHANGELOG.md committed${NC}"
+    fi
+  else
+    echo -e "${YELLOW}⚠️  update-changelog.sh not found${NC}"
+  fi
+fi
+
+echo ""
 echo "Next steps:"
 echo "  1. Review the version tag: git show ${NEW_TAG}"
-echo "  2. Update CHANGELOG.md if needed"
+echo "  2. Review CHANGELOG.md"
 echo "  3. Create a GitHub release with: ./generate-release-notes.sh ${NEW_TAG}"
 echo "  4. Deploy the new version"
 echo ""

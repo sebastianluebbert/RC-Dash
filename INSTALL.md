@@ -381,6 +381,18 @@ The script analyzes your commits and creates appropriate version tags:
 - `fix:` commits → patch version bump (0.0.x)
 - `BREAKING CHANGE:` → major version bump (x.0.0)
 
+### Changelog Management
+
+Keep your CHANGELOG.md up to date automatically:
+
+```bash
+# Generate/update CHANGELOG.md from git tags
+chmod +x update-changelog.sh
+./update-changelog.sh
+```
+
+The changelog is automatically generated in "Keep a Changelog" format with proper categorization.
+
 See [CONVENTIONAL_COMMITS.md](../CONVENTIONAL_COMMITS.md) for detailed versioning guide.
 
 ### Backup Database

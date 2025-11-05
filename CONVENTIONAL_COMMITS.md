@@ -205,30 +205,50 @@ This will:
 
 ### Manual Changelog
 
-You should also maintain a `CHANGELOG.md`:
+RexCloud automatically generates and maintains `CHANGELOG.md` using git tags:
+
+```bash
+# Generate/update CHANGELOG.md from all version tags
+chmod +x update-changelog.sh
+./update-changelog.sh
+```
+
+This will:
+1. Scan all version tags in your repository
+2. Categorize commits between versions
+3. Generate a formatted CHANGELOG.md in "Keep a Changelog" format
+4. Create backup of existing CHANGELOG.md
+
+The CHANGELOG.md follows the [Keep a Changelog](https://keepachangelog.com/) format with categories:
+- **⚠️ BREAKING CHANGES**: Breaking changes
+- **Added**: New features (`feat:`)
+- **Changed**: Refactoring and improvements (`refactor:`, `perf:`)
+- **Deprecated**: Soon-to-be removed features
+- **Removed**: Removed features
+- **Fixed**: Bug fixes (`fix:`)
+- **Security**: Security improvements (`security:`)
+
+Example CHANGELOG.md entry:
 
 ```markdown
-# Changelog
-
 ## [1.3.0] - 2024-01-15
 
 ### Added
-- Automatic backup system with configurable schedule
-- Mailbox quota management
-- VM snapshot support
+- **backup**: Automatic backup system with configurable schedule
+- **mail**: Mailbox quota management
+- **proxmox**: VM snapshot support
 
 ### Fixed
-- Database connection timeout issue
-- JWT token expiration bug
+- **database**: Connection timeout issue
+- **auth**: JWT token expiration bug
 
 ### Changed
-- Improved DNS zone update performance
-
-## [1.2.1] - 2024-01-10
-
-### Fixed
-- Authentication flow for OAuth2
+- **dns**: Improved zone update performance
 ```
+
+### Automatic Updates
+
+When you create a new version with `create-version.sh`, you'll be prompted to update CHANGELOG.md automatically.
 
 ## CI/CD Integration
 
