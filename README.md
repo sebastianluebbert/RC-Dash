@@ -4,32 +4,45 @@ Complete self-hosted solution for managing your infrastructure including Proxmox
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Docker & Docker Compose
-- Linux VM (Debian 11+ or Ubuntu 20.04+)
-- 2GB RAM minimum
-- 20GB disk space
+### Voraussetzungen
+- Linux VM (Ubuntu 22.04 LTS oder Debian 12)
+- Mindestens 2GB RAM, 2 CPU Cores
+- Docker & Docker Compose werden automatisch installiert
 
-### One-Line Installation
+### Installation in 3 Schritten
 
+**Schritt 1:** Repository klonen
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/rexcloud/main/install.sh | bash
-```
-
-Or manual setup:
-
-```bash
-# 1. Clone repository
 git clone https://github.com/yourusername/rexcloud.git
 cd rexcloud
-
-# 2. Run setup script
-chmod +x setup.sh
-./setup.sh
-
-# 3. Access application
-# Open http://your-server-ip in browser
 ```
+
+**Schritt 2:** Installations-Script ausführen
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+**Schritt 3:** Browser öffnen
+```
+http://your-server-ip
+```
+
+Das wars! 🎉
+
+### Detaillierte Anleitung
+
+Für eine **ausführliche Schritt-für-Schritt-Anleitung** siehe:
+- 📖 [DEPLOYMENT.md](DEPLOYMENT.md) - Komplette Deployment-Anleitung mit allen Details
+- 📖 [INSTALL.md](INSTALL.md) - Erweiterte Installations-Optionen
+
+Die DEPLOYMENT.md enthält:
+- VM-Vorbereitung und Anforderungen
+- Automatische & manuelle Installation
+- Konfiguration aller Dienste
+- SSL/TLS Setup
+- Troubleshooting
+- Wartung und Updates
 
 ## 📋 Features
 
@@ -322,9 +335,11 @@ MIT License - see LICENSE file for details
 
 ## 🆘 Support
 
-For issues and questions:
-- GitHub Issues: https://github.com/yourusername/rexcloud/issues
-- Documentation: https://docs.rexcloud.dev (coming soon)
+- 📖 **Deployment-Anleitung:** [DEPLOYMENT.md](DEPLOYMENT.md)
+- 📖 **Installation:** [INSTALL.md](INSTALL.md)
+- 📖 **Conventional Commits:** [CONVENTIONAL_COMMITS.md](CONVENTIONAL_COMMITS.md)
+- 🐛 **Issues:** https://github.com/yourusername/rexcloud/issues
+- 💬 **Discussions:** https://github.com/yourusername/rexcloud/discussions
 
 ## ⚙️ Architecture
 
