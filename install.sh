@@ -144,6 +144,11 @@ ENCRYPTION_KEY=$ENCRYPTION_KEY
 # Ports
 FRONTEND_PORT=80
 BACKEND_PORT=3001
+
+# Supabase Configuration (Lovable Cloud)
+VITE_SUPABASE_PROJECT_ID=uqvgzwangkbogwyfiydk
+VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxdmd6d2FuZ2tib2d3eWZpeWRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzMDYyNDUsImV4cCI6MjA3Nzg4MjI0NX0.ddHBBxROnl_SVwdOHdNDu6NX0anRdT8PwWo_j4jTQZI
+VITE_SUPABASE_URL=https://uqvgzwangkbogwyfiydk.supabase.co
 EOF
     print_success "Configuration generated"
     
