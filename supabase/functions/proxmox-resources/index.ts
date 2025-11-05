@@ -35,7 +35,17 @@ serve(async (req) => {
     for (const node of nodes) {
       const PROXMOX_HOST = node.host;
       const PROXMOX_USERNAME = node.username;
-      const PROXMOX_PASSWORD = node.password;
+      
+      // Decrypt password
+      const { data: decryptedPassword, error: decryptError } = await supabase
+        .rpc('decrypt_value', { encrypted_text: node.password_encrypted });
+
+      if (decryptError || !decryptedPassword) {
+        console.error(`Failed to decrypt password for node ${node.name}`);
+        continue;
+      }
+
+      const PROXMOX_PASSWORD = decryptedPassword;
 
       console.log(`Processing node: ${node.name} at ${PROXMOX_HOST}`);
 

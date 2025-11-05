@@ -46,7 +46,7 @@ export const ProxmoxSettings = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('proxmox_nodes')
-        .select('*')
+        .select('id, name, host, port, username, realm, verify_ssl')
         .order('name');
       
       if (error) throw error;
@@ -56,6 +56,12 @@ export const ProxmoxSettings = () => {
 
   const addNodeMutation = useMutation({
     mutationFn: async () => {
+      // Encrypt password before storing
+      const { data: encryptedPassword, error: encryptError } = await supabase
+        .rpc('encrypt_value', { plain_text: newNode.password });
+
+      if (encryptError) throw encryptError;
+
       const { data, error } = await supabase
         .from('proxmox_nodes')
         .insert([{
@@ -63,7 +69,8 @@ export const ProxmoxSettings = () => {
           host: newNode.host,
           port: newNode.port,
           username: newNode.username,
-          password: newNode.password,
+          password_encrypted: encryptedPassword,
+          is_encrypted: true,
           realm: newNode.realm,
           verify_ssl: false,
         }])
@@ -85,7 +92,7 @@ export const ProxmoxSettings = () => {
       });
       toast({
         title: "Erfolg",
-        description: "Proxmox-Server wurde erfolgreich hinzugefügt",
+        description: "Proxmox-Server wurde erfolgreich hinzugefügt (verschlüsselt)",
       });
     },
     onError: (error) => {
@@ -129,7 +136,7 @@ export const ProxmoxSettings = () => {
         <CardHeader>
           <CardTitle>Neuen Proxmox-Server hinzufügen</CardTitle>
           <CardDescription>
-            Verbinden Sie einen Proxmox-Server für VM- und Container-Management
+            Verbinden Sie einen Proxmox-Server für VM- und Container-Management (Passwörter werden verschlüsselt gespeichert)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -180,6 +187,9 @@ export const ProxmoxSettings = () => {
                 value={newNode.password}
                 onChange={(e) => setNewNode({ ...newNode, password: e.target.value })}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                🔒 Wird AES-256 verschlüsselt gespeichert
+              </p>
             </div>
             <Button
               onClick={() => addNodeMutation.mutate()}
@@ -196,7 +206,7 @@ export const ProxmoxSettings = () => {
         <CardHeader>
           <CardTitle>Konfigurierte Proxmox-Server</CardTitle>
           <CardDescription>
-            Ihre verbundenen Proxmox-Server
+            Ihre verbundenen Proxmox-Server (nur für Admins sichtbar)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -213,6 +223,9 @@ export const ProxmoxSettings = () => {
                     <h3 className="font-semibold">{node.name}</h3>
                     <p className="text-sm text-muted-foreground">{node.host}:{node.port}</p>
                     <p className="text-xs text-muted-foreground">User: {node.username}</p>
+                    <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1 mt-1">
+                      🔒 Passwort verschlüsselt
+                    </p>
                   </div>
                   <Button
                     variant="destructive"

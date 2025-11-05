@@ -19,25 +19,31 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_encrypted: boolean | null
           key: string
           updated_at: string
           value: Json
+          value_encrypted: string | null
         }
         Insert: {
           created_at?: string
           description?: string | null
           id?: string
+          is_encrypted?: boolean | null
           key: string
           updated_at?: string
           value: Json
+          value_encrypted?: string | null
         }
         Update: {
           created_at?: string
           description?: string | null
           id?: string
+          is_encrypted?: boolean | null
           key?: string
           updated_at?: string
           value?: Json
+          value_encrypted?: string | null
         }
         Relationships: []
       }
@@ -71,27 +77,33 @@ export type Database = {
       mailcow_servers: {
         Row: {
           api_key: string
+          api_key_encrypted: string | null
           created_at: string
           host: string
           id: string
+          is_encrypted: boolean | null
           name: string
           updated_at: string
           verify_ssl: boolean
         }
         Insert: {
           api_key: string
+          api_key_encrypted?: string | null
           created_at?: string
           host: string
           id?: string
+          is_encrypted?: boolean | null
           name: string
           updated_at?: string
           verify_ssl?: boolean
         }
         Update: {
           api_key?: string
+          api_key_encrypted?: string | null
           created_at?: string
           host?: string
           id?: string
+          is_encrypted?: boolean | null
           name?: string
           updated_at?: string
           verify_ssl?: boolean
@@ -104,8 +116,10 @@ export type Database = {
           customer_id: string | null
           host: string
           id: string
+          is_encrypted: boolean | null
           name: string
           password: string
+          password_encrypted: string | null
           port: number
           updated_at: string
           username: string
@@ -116,8 +130,10 @@ export type Database = {
           customer_id?: string | null
           host: string
           id?: string
+          is_encrypted?: boolean | null
           name: string
           password: string
+          password_encrypted?: string | null
           port?: number
           updated_at?: string
           username: string
@@ -128,8 +144,10 @@ export type Database = {
           customer_id?: string | null
           host?: string
           id?: string
+          is_encrypted?: boolean | null
           name?: string
           password?: string
+          password_encrypted?: string | null
           port?: number
           updated_at?: string
           username?: string
@@ -171,8 +189,10 @@ export type Database = {
           created_at: string
           host: string
           id: string
+          is_encrypted: boolean | null
           name: string
           password: string
+          password_encrypted: string | null
           port: number
           realm: string
           updated_at: string
@@ -183,8 +203,10 @@ export type Database = {
           created_at?: string
           host: string
           id?: string
+          is_encrypted?: boolean | null
           name: string
           password?: string
+          password_encrypted?: string | null
           port?: number
           realm?: string
           updated_at?: string
@@ -195,8 +217,10 @@ export type Database = {
           created_at?: string
           host?: string
           id?: string
+          is_encrypted?: boolean | null
           name?: string
           password?: string
+          password_encrypted?: string | null
           port?: number
           realm?: string
           updated_at?: string
@@ -259,12 +283,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      decrypt_value: { Args: { encrypted_text: string }; Returns: string }
+      encrypt_value: { Args: { plain_text: string }; Returns: string }
+      get_encryption_key: { Args: never; Returns: string }
+      is_admin: { Args: { check_user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

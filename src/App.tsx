@@ -21,6 +21,7 @@ import Mail from "./pages/Mail";
 import Auth from "./pages/Auth";
 import Websites from "./pages/Websites";
 import WebsiteDetail from "./pages/WebsiteDetail";
+import { AdminSetup } from "./components/AdminSetup";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/admin-setup" element={<AdminSetup />} />
             <Route
               path="/*"
               element={
