@@ -1,80 +1,87 @@
-# Conventional Commits Guide for RexCloud
+# Conventional Commits Guide
 
-This guide explains how to write commit messages that work with our automatic versioning system.
+Dieses Projekt verwendet [Conventional Commits](https://www.conventionalcommits.org/) für **automatisches Semantic Versioning** via GitHub Actions.
+
+## 🚀 Automatische Versionierung
+
+Bei jedem Push auf `main` wird automatisch:
+1. Die Commit-Messages analysiert
+2. Die passende neue Version berechnet
+3. Ein Git-Tag mit kategorisiertem Changelog erstellt
+4. Ein GitHub Release erstellt
 
 ## Commit Message Format
 
 ```
-<type>[optional scope]: <description>
+<type>(<scope>): <description>
 
 [optional body]
 
 [optional footer(s)]
 ```
 
-## Commit Types
+## Version Bumps
 
-### Version Bumps
+### 🚨 BREAKING CHANGE (Major: 1.0.0 → 2.0.0)
 
-- **feat:** A new feature (triggers **MINOR** version bump: 0.x.0)
-- **fix:** A bug fix (triggers **PATCH** version bump: 0.0.x)
-- **BREAKING CHANGE:** or `!` after type (triggers **MAJOR** version bump: x.0.0)
 
-### No Version Bump
-
-- **docs:** Documentation only changes
-- **style:** Code style changes (formatting, missing semi-colons, etc)
-- **refactor:** Code refactoring without adding features or fixing bugs
-- **perf:** Performance improvements
-- **test:** Adding or updating tests
-- **chore:** Changes to build process or auxiliary tools
-
-## Examples
-
-### Feature (Minor Version Bump)
+Breaking Changes führen zu einer **Major-Version-Erhöhung**:
 
 ```bash
-git commit -m "feat: add automatic backup system"
-git commit -m "feat(dns): add AutoDNS support"
+# Option 1: Mit ! im Type
+feat!: neue API mit breaking changes
+
+# Option 2: Im Footer
+feat: neue API
+
+BREAKING CHANGE: Die alte API ist nicht mehr kompatibel
+
+# Option 3: Im Body
+feat: neue API
+
+BREAKING: Die alte API wurde entfernt
 ```
 
-Result: `v1.2.0` → `v1.3.0`
+**Ergebnis:** `v1.2.3` → `v2.0.0`
 
-### Bug Fix (Patch Version Bump)
+### ✨ feat: (Minor: 1.0.0 → 1.1.0)
+
+Neue Features führen zu einer **Minor-Version-Erhöhung**:
 
 ```bash
-git commit -m "fix: resolve database connection timeout"
-git commit -m "fix(auth): correct JWT token expiration"
+feat: Benutzer können jetzt Tags hinzufügen
+feat(api): neue Endpoint für Authentifizierung
+feat(ui): Dark Mode hinzugefügt
 ```
 
-Result: `v1.2.0` → `v1.2.1`
+**Ergebnis:** `v1.2.3` → `v1.3.0`
 
-### Breaking Change (Major Version Bump)
+### 🐛 fix: (Patch: 1.0.0 → 1.0.1)
 
-Option 1: Using `!` after type
-```bash
-git commit -m "feat!: change API authentication method"
-```
-
-Option 2: Using footer
-```bash
-git commit -m "feat: change API authentication method
-
-BREAKING CHANGE: API now requires OAuth2 instead of API keys"
-```
-
-Result: `v1.2.0` → `v2.0.0`
-
-### No Version Bump
+Bug Fixes führen zu einer **Patch-Version-Erhöhung**:
 
 ```bash
-git commit -m "docs: update installation guide"
-git commit -m "style: format code with prettier"
-git commit -m "refactor: simplify database queries"
-git commit -m "chore: update dependencies"
+fix: Button-Klick funktioniert jetzt korrekt
+fix(auth): Token-Validierung repariert
+fix(ui): Layout-Problem im Header behoben
 ```
 
-Result: No new version tag created
+**Ergebnis:** `v1.2.3` → `v1.2.4`
+
+### 📦 Andere Types (Patch: 1.0.0 → 1.0.1)
+
+Andere Änderungen führen standardmäßig zu einer **Patch-Version-Erhöhung**:
+
+```bash
+docs: README aktualisiert
+style: Code-Formatierung verbessert
+refactor: Funktion umstrukturiert
+perf: Performance-Optimierung
+test: Tests hinzugefügt
+chore: Dependencies aktualisiert
+```
+
+**Ergebnis:** `v1.2.3` → `v1.2.4`
 
 ## Using the Auto-Versioning Script
 

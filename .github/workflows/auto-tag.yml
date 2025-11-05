@@ -1,4 +1,4 @@
-name: Auto Tag on Push
+name: Semantic Versioning Auto Tag
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  auto-tag:
+  semantic-version:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -18,8 +18,8 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get latest tag
-        id: get_tag
+      - name: Get latest tag and analyze commits
+        id: version
         run: |
           # Get the latest tag, default to v0.0.0 if none exists
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
@@ -29,61 +29,168 @@ jobs:
           VERSION=${LATEST_TAG#v}
           IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
           
-          # Increment patch version
-          NEW_PATCH=$((PATCH + 1))
-          NEW_TAG="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+          # Get commits since last tag
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            COMMITS=$(git log --pretty=format:"%s" -n 50)
+          else
+            COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"%s")
+          fi
+          
+          # Analyze commit messages for version bump type
+          HAS_BREAKING=false
+          HAS_FEAT=false
+          HAS_FIX=false
+          
+          while IFS= read -r commit; do
+            # Check for breaking changes
+            if echo "$commit" | grep -qiE "(BREAKING CHANGE|BREAKING:|!:)"; then
+              HAS_BREAKING=true
+            fi
+            
+            # Check for features
+            if echo "$commit" | grep -qE "^feat(\(.+\))?:"; then
+              HAS_FEAT=true
+            fi
+            
+            # Check for fixes
+            if echo "$commit" | grep -qE "^fix(\(.+\))?:"; then
+              HAS_FIX=true
+            fi
+          done <<< "$COMMITS"
+          
+          # Determine version bump
+          if [ "$HAS_BREAKING" = true ]; then
+            NEW_MAJOR=$((MAJOR + 1))
+            NEW_MINOR=0
+            NEW_PATCH=0
+            BUMP_TYPE="major"
+          elif [ "$HAS_FEAT" = true ]; then
+            NEW_MAJOR=$MAJOR
+            NEW_MINOR=$((MINOR + 1))
+            NEW_PATCH=0
+            BUMP_TYPE="minor"
+          elif [ "$HAS_FIX" = true ]; then
+            NEW_MAJOR=$MAJOR
+            NEW_MINOR=$MINOR
+            NEW_PATCH=$((PATCH + 1))
+            BUMP_TYPE="patch"
+          else
+            # Default to patch for other changes
+            NEW_MAJOR=$MAJOR
+            NEW_MINOR=$MINOR
+            NEW_PATCH=$((PATCH + 1))
+            BUMP_TYPE="patch"
+          fi
+          
+          NEW_TAG="v${NEW_MAJOR}.${NEW_MINOR}.${NEW_PATCH}"
           
           echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
-          echo "New version will be: $NEW_TAG"
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          echo "✅ Version bump: $LATEST_TAG → $NEW_TAG (${BUMP_TYPE})"
 
-      - name: Get commit messages since last tag
-        id: get_changes
+      - name: Generate categorized changelog
+        id: changelog
         run: |
-          LATEST_TAG="${{ steps.get_tag.outputs.latest_tag }}"
+          LATEST_TAG="${{ steps.version.outputs.latest_tag }}"
           
           # Get commits since last tag
           if [ "$LATEST_TAG" = "v0.0.0" ]; then
-            CHANGES=$(git log --pretty=format:"- %s" -n 10)
+            COMMITS=$(git log --pretty=format:"%s|%h|%an" -n 50)
           else
-            CHANGES=$(git log ${LATEST_TAG}..HEAD --pretty=format:"- %s")
+            COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"%s|%h|%an")
           fi
           
-          # Save changes to file to handle multiline
-          echo "$CHANGES" > changes.txt
-          echo "changes<<EOF" >> $GITHUB_OUTPUT
-          cat changes.txt >> $GITHUB_OUTPUT
+          # Initialize categories
+          BREAKING_CHANGES=""
+          FEATURES=""
+          FIXES=""
+          OTHERS=""
+          
+          # Categorize commits
+          while IFS='|' read -r message hash author; do
+            if echo "$message" | grep -qiE "(BREAKING CHANGE|BREAKING:|!:)"; then
+              BREAKING_CHANGES="${BREAKING_CHANGES}- 💥 ${message} (${hash})\n"
+            elif echo "$message" | grep -qE "^feat(\(.+\))?:"; then
+              CLEAN_MSG=$(echo "$message" | sed 's/^feat(\(.*\)): //')
+              FEATURES="${FEATURES}- ✨ ${CLEAN_MSG} (${hash})\n"
+            elif echo "$message" | grep -qE "^fix(\(.+\))?:"; then
+              CLEAN_MSG=$(echo "$message" | sed 's/^fix(\(.*\)): //')
+              FIXES="${FIXES}- 🐛 ${CLEAN_MSG} (${hash})\n"
+            elif echo "$message" | grep -qE "^(docs|style|refactor|perf|test|chore)(\(.+\))?:"; then
+              TYPE=$(echo "$message" | sed -E 's/^([a-z]+)(\(.+\))?: .*/\1/')
+              CLEAN_MSG=$(echo "$message" | sed -E 's/^[a-z]+(\(.+\))?: //')
+              OTHERS="${OTHERS}- 📦 [${TYPE}] ${CLEAN_MSG} (${hash})\n"
+            else
+              OTHERS="${OTHERS}- ${message} (${hash})\n"
+            fi
+          done <<< "$COMMITS"
+          
+          # Build changelog
+          CHANGELOG=""
+          
+          if [ -n "$BREAKING_CHANGES" ]; then
+            CHANGELOG="${CHANGELOG}## 💥 Breaking Changes\n\n${BREAKING_CHANGES}\n"
+          fi
+          
+          if [ -n "$FEATURES" ]; then
+            CHANGELOG="${CHANGELOG}## ✨ New Features\n\n${FEATURES}\n"
+          fi
+          
+          if [ -n "$FIXES" ]; then
+            CHANGELOG="${CHANGELOG}## 🐛 Bug Fixes\n\n${FIXES}\n"
+          fi
+          
+          if [ -n "$OTHERS" ]; then
+            CHANGELOG="${CHANGELOG}## 📦 Other Changes\n\n${OTHERS}\n"
+          fi
+          
+          # Save to file
+          echo -e "$CHANGELOG" > changelog.txt
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          cat changelog.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create and push tag
         env:
-          NEW_TAG: ${{ steps.get_tag.outputs.new_tag }}
-          CHANGES: ${{ steps.get_changes.outputs.changes }}
+          NEW_TAG: ${{ steps.version.outputs.new_tag }}
+          BUMP_TYPE: ${{ steps.version.outputs.bump_type }}
+          CHANGELOG: ${{ steps.changelog.outputs.changelog }}
         run: |
           # Configure git
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           
-          # Create annotated tag with changes
-          git tag -a "$NEW_TAG" -m "Release $NEW_TAG
+          # Create annotated tag with changelog
+          git tag -a "$NEW_TAG" -m "Release $NEW_TAG - ${BUMP_TYPE} version bump
 
-Changes:
-$CHANGES"
+$CHANGELOG"
           
           # Push tag
           git push origin "$NEW_TAG"
           
-          echo "✅ Created and pushed tag: $NEW_TAG"
+          echo "✅ Created and pushed tag: $NEW_TAG (${BUMP_TYPE} bump)"
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.get_tag.outputs.new_tag }}
-          release_name: Release ${{ steps.get_tag.outputs.new_tag }}
+          tag_name: ${{ steps.version.outputs.new_tag }}
+          release_name: Release ${{ steps.version.outputs.new_tag }}
           body: |
-            ## Changes
+            # Release ${{ steps.version.outputs.new_tag }}
             
-            ${{ steps.get_changes.outputs.changes }}
+            **Version Bump:** `${{ steps.version.outputs.bump_type }}`
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ---
+            
+            ## 📝 Commit Message Convention
+            
+            This release follows [Conventional Commits](https://www.conventionalcommits.org/):
+            - `feat:` → Minor version bump (new features)
+            - `fix:` → Patch version bump (bug fixes)
+            - `BREAKING CHANGE:` or `!:` → Major version bump (breaking changes)
           draft: false
           prerelease: false
