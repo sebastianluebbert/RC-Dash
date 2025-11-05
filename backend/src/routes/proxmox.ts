@@ -267,3 +267,218 @@ proxmoxRouter.post('/control', async (req: AuthRequest, res, next) => {
     next(error);
   }
 });
+
+// Create LXC Container
+const createLXCSchema = z.object({
+  node: z.string().min(1).max(255),
+  vmid: z.number().int().positive(),
+  hostname: z.string().min(1).max(255),
+  password: z.string().min(6),
+  ostemplate: z.string().min(1),
+  storage: z.string().default('local-lvm'),
+  cores: z.number().int().positive().default(1),
+  memory: z.number().int().positive().default(512),
+  swap: z.number().int().nonnegative().default(512),
+  disk: z.number().int().positive().default(8),
+  net0: z.string().default('name=eth0,bridge=vmbr0,ip=dhcp'),
+  unprivileged: z.boolean().default(true),
+  start: z.boolean().default(true),
+});
+
+proxmoxRouter.post('/lxc/create', async (req: AuthRequest, res, next) => {
+  try {
+    const validated = createLXCSchema.parse(req.body);
+    const { node, ...lxcConfig } = validated;
+
+    // Get Proxmox node configuration
+    const nodeResult = await query(
+      'SELECT host, port, username, password_encrypted, realm FROM proxmox_nodes WHERE name = $1',
+      [node]
+    );
+
+    if (nodeResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Proxmox node not found' });
+    }
+
+    const nodeConfig = nodeResult.rows[0];
+    const password = decrypt(nodeConfig.password_encrypted);
+
+    // Authenticate with Proxmox
+    const authResponse = await fetch(
+      `${nodeConfig.host}:${nodeConfig.port}/api2/json/access/ticket`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          username: nodeConfig.username,
+          password: password,
+          realm: nodeConfig.realm,
+        }),
+      }
+    );
+
+    if (!authResponse.ok) {
+      throw new Error('Proxmox authentication failed');
+    }
+
+    const authData: any = await authResponse.json();
+
+    // Create LXC container
+    const createResponse = await fetch(
+      `${nodeConfig.host}:${nodeConfig.port}/api2/json/nodes/${node}/lxc`,
+      {
+        method: 'POST',
+        headers: {
+          'Cookie': `PVEAuthCookie=${authData.data.ticket}`,
+          'CSRFPreventionToken': authData.data.CSRFPreventionToken,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          vmid: lxcConfig.vmid.toString(),
+          hostname: lxcConfig.hostname,
+          password: lxcConfig.password,
+          ostemplate: lxcConfig.ostemplate,
+          storage: lxcConfig.storage,
+          cores: lxcConfig.cores.toString(),
+          memory: lxcConfig.memory.toString(),
+          swap: lxcConfig.swap.toString(),
+          rootfs: `${lxcConfig.storage}:${lxcConfig.disk}`,
+          net0: lxcConfig.net0,
+          unprivileged: lxcConfig.unprivileged ? '1' : '0',
+          start: lxcConfig.start ? '1' : '0',
+        }),
+      }
+    );
+
+    if (!createResponse.ok) {
+      const errorData: any = await createResponse.json();
+      throw new Error(errorData.errors || 'Failed to create LXC container');
+    }
+
+    const createData: any = await createResponse.json();
+
+    res.json({
+      success: true,
+      message: 'LXC container creation started',
+      taskId: createData.data,
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid request data', details: error.errors });
+    }
+    next(error);
+  }
+});
+
+// Create VM
+const createVMSchema = z.object({
+  node: z.string().min(1).max(255),
+  vmid: z.number().int().positive(),
+  name: z.string().min(1).max(255),
+  memory: z.number().int().positive().default(2048),
+  cores: z.number().int().positive().default(2),
+  sockets: z.number().int().positive().default(1),
+  disk: z.number().int().positive().default(32),
+  storage: z.string().default('local-lvm'),
+  iso: z.string().min(1),
+  net0: z.string().default('virtio,bridge=vmbr0'),
+  ostype: z.string().default('l26'),
+  start: z.boolean().default(false),
+});
+
+proxmoxRouter.post('/vm/create', async (req: AuthRequest, res, next) => {
+  try {
+    const validated = createVMSchema.parse(req.body);
+    const { node, ...vmConfig } = validated;
+
+    // Get Proxmox node configuration
+    const nodeResult = await query(
+      'SELECT host, port, username, password_encrypted, realm FROM proxmox_nodes WHERE name = $1',
+      [node]
+    );
+
+    if (nodeResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Proxmox node not found' });
+    }
+
+    const nodeConfig = nodeResult.rows[0];
+    const password = decrypt(nodeConfig.password_encrypted);
+
+    // Authenticate with Proxmox
+    const authResponse = await fetch(
+      `${nodeConfig.host}:${nodeConfig.port}/api2/json/access/ticket`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          username: nodeConfig.username,
+          password: password,
+          realm: nodeConfig.realm,
+        }),
+      }
+    );
+
+    if (!authResponse.ok) {
+      throw new Error('Proxmox authentication failed');
+    }
+
+    const authData: any = await authResponse.json();
+
+    // Create VM
+    const createResponse = await fetch(
+      `${nodeConfig.host}:${nodeConfig.port}/api2/json/nodes/${node}/qemu`,
+      {
+        method: 'POST',
+        headers: {
+          'Cookie': `PVEAuthCookie=${authData.data.ticket}`,
+          'CSRFPreventionToken': authData.data.CSRFPreventionToken,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          vmid: vmConfig.vmid.toString(),
+          name: vmConfig.name,
+          memory: vmConfig.memory.toString(),
+          cores: vmConfig.cores.toString(),
+          sockets: vmConfig.sockets.toString(),
+          scsi0: `${vmConfig.storage}:${vmConfig.disk}`,
+          ide2: `${vmConfig.iso},media=cdrom`,
+          net0: vmConfig.net0,
+          ostype: vmConfig.ostype,
+          boot: 'order=scsi0;ide2',
+        }),
+      }
+    );
+
+    if (!createResponse.ok) {
+      const errorData: any = await createResponse.json();
+      throw new Error(errorData.errors || 'Failed to create VM');
+    }
+
+    const createData: any = await createResponse.json();
+
+    // Start VM if requested
+    if (vmConfig.start) {
+      await fetch(
+        `${nodeConfig.host}:${nodeConfig.port}/api2/json/nodes/${node}/qemu/${vmConfig.vmid}/status/start`,
+        {
+          method: 'POST',
+          headers: {
+            'Cookie': `PVEAuthCookie=${authData.data.ticket}`,
+            'CSRFPreventionToken': authData.data.CSRFPreventionToken,
+          },
+        }
+      );
+    }
+
+    res.json({
+      success: true,
+      message: 'VM creation started',
+      taskId: createData.data,
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid request data', details: error.errors });
+    }
+    next(error);
+  }
+});

@@ -9,6 +9,10 @@ import { dnsRouter } from './routes/dns';
 import { mailRouter } from './routes/mail';
 import { pleskRouter } from './routes/plesk';
 import { settingsRouter } from './routes/settings';
+import { hetznerRouter } from './routes/hetzner';
+import { vncRouter } from './routes/vnc';
+import { scriptsRouter } from './routes/scripts';
+import { customersRouter } from './routes/customers';
 import { errorHandler } from './middleware/errorHandler';
 import { initDatabase } from './database/init';
 
@@ -48,6 +52,10 @@ app.use('/api/dns', dnsRouter);
 app.use('/api/mail', mailRouter);
 app.use('/api/plesk', pleskRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/hetzner', hetznerRouter);
+app.use('/api/vnc', vncRouter);
+app.use('/api/scripts', scriptsRouter);
+app.use('/api/customers', customersRouter);
 
 // Error handling
 app.use(errorHandler);
