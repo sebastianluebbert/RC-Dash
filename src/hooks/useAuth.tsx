@@ -1,13 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import apiClient from "@/lib/api-client";
-
-interface User {
-  id: string;
-  email: string;
-  username?: string;
-  isAdmin: boolean;
-}
+import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -15,39 +9,30 @@ export const useAuth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (token && storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
-      }
-    }
-    
-    setLoading(false);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signOut = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
+  const signOut = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     navigate("/auth");
   };
 
   const refreshUser = async () => {
-    try {
-      const response = await apiClient.get('/auth/me');
-      const userData = response.data.user;
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-    } catch (error) {
-      console.error('Error refreshing user:', error);
-      signOut();
-    }
+    const { data: { session } } = await supabase.auth.getSession();
+    setUser(session?.user ?? null);
   };
 
   return { user, loading, signOut, refreshUser };
