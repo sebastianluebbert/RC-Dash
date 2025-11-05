@@ -37,12 +37,9 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src/database/schema.sql ./dist/database/
 
 # Clone repository for version info (shallow clone)
-RUN git clone --depth 1 --branch main ${GIT_REPO_URL} /tmp/repo && \
+RUN git clone --depth 50 --branch main ${GIT_REPO_URL} /tmp/repo && \
     cp -r /tmp/repo/.git ./.git && \
     rm -rf /tmp/repo
-
-# Copy package.json for version info
-COPY package.json ./package.json
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

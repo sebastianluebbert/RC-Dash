@@ -1,7 +1,7 @@
 {
-  "name": "rexcloud-backend",
+  "name": "rc-dash",
   "version": "1.0.0",
-  "description": "Self-hosted backend for RexCloud Management Platform",
+  "description": "Self-hosted backend for RC-Dash Management Platform",
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",
