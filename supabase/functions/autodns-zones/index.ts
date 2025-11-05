@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,12 +12,30 @@ serve(async (req) => {
   }
 
   try {
-    const autodnsUser = Deno.env.get('AUTODNS_API_USER');
-    const autodnsPassword = Deno.env.get('AUTODNS_API_PASSWORD');
-    const autodnsContext = Deno.env.get('AUTODNS_API_CONTEXT');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get AutoDNS credentials from database
+    const { data: settings, error: settingsError } = await supabase
+      .from('application_settings')
+      .select('value')
+      .eq('key', 'autodns_credentials')
+      .maybeSingle();
+
+    if (settingsError) throw settingsError;
+    
+    if (!settings?.value) {
+      throw new Error('AutoDNS Credentials nicht konfiguriert. Bitte in den Einstellungen hinterlegen.');
+    }
+    
+    const credentials = settings.value as any;
+    const autodnsUser = credentials.user;
+    const autodnsPassword = credentials.password;
+    const autodnsContext = credentials.context;
     
     if (!autodnsUser || !autodnsPassword || !autodnsContext) {
-      throw new Error('AutoDNS credentials not configured');
+      throw new Error('AutoDNS Credentials unvollständig. Bitte alle Felder in den Einstellungen ausfüllen.');
     }
 
     console.log('Fetching AutoDNS zones');

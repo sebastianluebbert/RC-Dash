@@ -14,7 +14,245 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      application_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mailcow_servers: {
+        Row: {
+          api_key: string
+          created_at: string
+          host: string
+          id: string
+          name: string
+          updated_at: string
+          verify_ssl: boolean
+        }
+        Insert: {
+          api_key: string
+          created_at?: string
+          host: string
+          id?: string
+          name: string
+          updated_at?: string
+          verify_ssl?: boolean
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          host?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          verify_ssl?: boolean
+        }
+        Relationships: []
+      }
+      plesk_servers: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          host: string
+          id: string
+          name: string
+          password: string
+          port: number
+          updated_at: string
+          username: string
+          verify_ssl: boolean
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          host: string
+          id?: string
+          name: string
+          password: string
+          port?: number
+          updated_at?: string
+          username: string
+          verify_ssl?: boolean
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          host?: string
+          id?: string
+          name?: string
+          password?: string
+          port?: number
+          updated_at?: string
+          username?: string
+          verify_ssl?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plesk_servers_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      proxmox_nodes: {
+        Row: {
+          created_at: string
+          host: string
+          id: string
+          name: string
+          port: number
+          realm: string
+          updated_at: string
+          verify_ssl: boolean
+        }
+        Insert: {
+          created_at?: string
+          host: string
+          id?: string
+          name: string
+          port?: number
+          realm?: string
+          updated_at?: string
+          verify_ssl?: boolean
+        }
+        Update: {
+          created_at?: string
+          host?: string
+          id?: string
+          name?: string
+          port?: number
+          realm?: string
+          updated_at?: string
+          verify_ssl?: boolean
+        }
+        Relationships: []
+      }
+      servers: {
+        Row: {
+          cpu_usage: number | null
+          created_at: string
+          disk_total: number | null
+          disk_usage: number | null
+          id: string
+          last_sync: string | null
+          memory_total: number | null
+          memory_usage: number | null
+          name: string
+          node: string
+          status: string
+          type: string
+          updated_at: string
+          uptime: number | null
+          vmid: number
+        }
+        Insert: {
+          cpu_usage?: number | null
+          created_at?: string
+          disk_total?: number | null
+          disk_usage?: number | null
+          id?: string
+          last_sync?: string | null
+          memory_total?: number | null
+          memory_usage?: number | null
+          name: string
+          node: string
+          status: string
+          type: string
+          updated_at?: string
+          uptime?: number | null
+          vmid: number
+        }
+        Update: {
+          cpu_usage?: number | null
+          created_at?: string
+          disk_total?: number | null
+          disk_usage?: number | null
+          id?: string
+          last_sync?: string | null
+          memory_total?: number | null
+          memory_usage?: number | null
+          name?: string
+          node?: string
+          status?: string
+          type?: string
+          updated_at?: string
+          uptime?: number | null
+          vmid?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

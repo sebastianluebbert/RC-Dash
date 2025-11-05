@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { DNSProviderSettings } from "@/components/DNSProviderSettings";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -601,28 +602,7 @@ const Settings = () => {
         </TabsContent>
 
         <TabsContent value="dns" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>DNS Provider Credentials</CardTitle>
-              <CardDescription>
-                Ihre API-Credentials sind als Secrets gespeichert
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 text-sm text-muted-foreground">
-                <p>
-                  Die folgenden API-Credentials sind bereits konfiguriert:
-                </p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Hetzner DNS API Key</li>
-                  <li>AutoDNS API Credentials</li>
-                </ul>
-                <p className="mt-4">
-                  Um diese zu ändern, kontaktieren Sie bitte den Administrator.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <DNSProviderSettings />
         </TabsContent>
       </Tabs>
 
