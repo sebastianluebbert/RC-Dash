@@ -30,19 +30,18 @@ http://your-server-ip
 
 Das wars! 🎉
 
-### Detaillierte Anleitung
+### Detaillierte Anleitungen
 
-Für eine **ausführliche Schritt-für-Schritt-Anleitung** siehe:
+Für **ausführliche Schritt-für-Schritt-Anleitungen** siehe:
+- 📖 [VISUAL_GUIDE.md](VISUAL_GUIDE.md) - **Visuelle Anleitung mit Diagrammen und Screenshots**
 - 📖 [DEPLOYMENT.md](DEPLOYMENT.md) - Komplette Deployment-Anleitung mit allen Details
 - 📖 [INSTALL.md](INSTALL.md) - Erweiterte Installations-Optionen
 
-Die DEPLOYMENT.md enthält:
-- VM-Vorbereitung und Anforderungen
-- Automatische & manuelle Installation
-- Konfiguration aller Dienste
-- SSL/TLS Setup
-- Troubleshooting
-- Wartung und Updates
+Die VISUAL_GUIDE.md enthält:
+- Installations-Workflow-Diagramme
+- Erwartete Terminal-Ausgaben
+- UI-Beschreibungen für jeden Schritt
+- Häufige Fehler und Lösungen
 
 ## 📋 Features
 

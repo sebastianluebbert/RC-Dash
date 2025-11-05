@@ -2,6 +2,8 @@
 
 Diese Anleitung führt Sie Schritt-für-Schritt durch die Installation von RexCloud auf einer frischen Linux VM.
 
+> 💡 **Tipp:** Für eine **visuelle Anleitung** mit Diagrammen und erwarteten Ausgaben siehe [VISUAL_GUIDE.md](VISUAL_GUIDE.md)
+
 ## 📋 Inhaltsverzeichnis
 
 1. [VM-Vorbereitung](#1-vm-vorbereitung)
