@@ -213,14 +213,65 @@ echo "SSL_EMAIL=$EMAIL" >> .env
 
 # Update docker-compose for SSL
 echo "⚙️  Updating docker-compose.yml..."
-if ! grep -q "443:443" docker-compose.yml; then
-    # Backup original
+if [ ! -f "docker-compose.yml.backup" ]; then
     cp docker-compose.yml docker-compose.yml.backup
+    echo "✓ Backup created: docker-compose.yml.backup"
+fi
+
+# Create updated docker-compose.yml with SSL configuration
+python3 - <<EOF
+import yaml
+import sys
+
+try:
+    with open('docker-compose.yml', 'r') as f:
+        config = yaml.safe_load(f)
     
-    # Add SSL port and volumes
-    sed -i '/ports:/a\      - "443:443"' docker-compose.yml
-    sed -i '/nginx.conf:/a\      - ./nginx/ssl:/etc/nginx/ssl:ro' docker-compose.yml
-    sed -i '/nginx.conf:/a\      - ./certbot/www:/var/www/certbot:ro' docker-compose.yml
+    frontend = config['services']['frontend']
+    
+    # Add port 443 if not present
+    if 'ports' in frontend:
+        ports = frontend['ports']
+        if '443:443' not in ports and '"443:443"' not in str(ports):
+            frontend['ports'].append('443:443')
+            print("✓ Added port 443")
+    
+    # Add volumes if not present
+    if 'volumes' not in frontend:
+        frontend['volumes'] = []
+    
+    volumes = frontend['volumes']
+    ssl_vol = './nginx/ssl:/etc/nginx/ssl:ro'
+    certbot_vol = './certbot/www:/var/www/certbot:ro'
+    
+    if ssl_vol not in volumes:
+        frontend['volumes'].append(ssl_vol)
+        print("✓ Added SSL volume mount")
+    
+    if certbot_vol not in volumes:
+        frontend['volumes'].append(certbot_vol)
+        print("✓ Added Certbot volume mount")
+    
+    with open('docker-compose.yml', 'w') as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+    
+    print("✓ docker-compose.yml updated successfully")
+    
+except Exception as e:
+    print(f"⚠️  Python YAML update failed: {e}")
+    print("Falling back to sed commands...")
+    sys.exit(1)
+EOF
+
+# Fallback to sed if Python fails
+if [ $? -ne 0 ]; then
+    if ! grep -q "443:443" docker-compose.yml; then
+        sed -i '/ports:/a\      - "443:443"' docker-compose.yml
+    fi
+    if ! grep -q "nginx/ssl" docker-compose.yml; then
+        sed -i '/nginx.conf:/a\      - ./nginx/ssl:/etc/nginx/ssl:ro' docker-compose.yml
+        sed -i '/nginx.conf:/a\      - ./certbot/www:/var/www/certbot:ro' docker-compose.yml
+    fi
 fi
 
 # Setup auto-renewal cron job
