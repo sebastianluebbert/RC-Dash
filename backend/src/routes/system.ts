@@ -11,7 +11,8 @@ const router = Router();
 // Get current version from git tags
 router.get('/version', async (req, res) => {
   try {
-    const packagePath = path.join(__dirname, '../../../package.json');
+    // In Docker, package.json is in the app root
+    const packagePath = path.join(__dirname, '../../package.json');
     const packageJson = JSON.parse(await readFile(packagePath, 'utf-8'));
     
     // Try to get version from git tag
