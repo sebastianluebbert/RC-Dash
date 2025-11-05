@@ -141,14 +141,31 @@ else
     print_success "Using existing configuration"
 fi
 
+# Load environment variables
+export $(grep -v '^#' .env | xargs)
+
+# Check Docker permissions
+if ! docker ps &> /dev/null; then
+    print_error "Cannot connect to Docker daemon"
+    echo ""
+    echo "Please run one of the following commands:"
+    echo "  1. Activate Docker group for current session:"
+    echo "     newgrp docker"
+    echo "     Then run this script again"
+    echo ""
+    echo "  2. Or log out and back in, then run this script again"
+    echo ""
+    exit 1
+fi
+
 # Build and start containers
 print_info "Building Docker containers (this may take a few minutes)..."
 docker-compose build --no-cache
 print_success "Containers built"
 
-print_info "Starting RexCloud..."
+print_info "Starting RC-Dash..."
 docker-compose up -d
-print_success "RexCloud started"
+print_success "RC-Dash started"
 
 # Wait for services to be healthy
 print_info "Waiting for services to be ready..."
@@ -167,10 +184,10 @@ SERVER_IP=$(hostname -I | awk '{print $1}')
 
 echo ""
 echo "================================"
-echo -e "${GREEN}✓ RexCloud Installation Complete!${NC}"
+echo -e "${GREEN}✓ RC-Dash Installation Complete!${NC}"
 echo "================================"
 echo ""
-echo "📍 Access your RexCloud instance:"
+echo "📍 Access your RC-Dash instance:"
 echo "   http://$SERVER_IP"
 echo "   http://localhost (if accessing locally)"
 echo ""
@@ -181,13 +198,11 @@ echo "   3. Configure your Proxmox/Plesk/DNS settings"
 echo ""
 echo "📚 Useful commands:"
 echo "   View logs:        cd $INSTALL_DIR && docker-compose logs -f"
-echo "   Stop RexCloud:    cd $INSTALL_DIR && docker-compose stop"
-echo "   Start RexCloud:   cd $INSTALL_DIR && docker-compose start"
+echo "   Stop RC-Dash:     cd $INSTALL_DIR && docker-compose stop"
+echo "   Start RC-Dash:    cd $INSTALL_DIR && docker-compose start"
 echo "   Restart:          cd $INSTALL_DIR && docker-compose restart"
 echo "   Update:           cd $INSTALL_DIR && git pull && docker-compose up -d --build"
 echo ""
 echo "📁 Installation directory: $INSTALL_DIR"
 echo "⚙️  Configuration file: $INSTALL_DIR/.env"
-echo ""
-print_info "Note: You may need to log out and back in for Docker group changes to take effect"
 echo ""
