@@ -23,6 +23,9 @@ RUN apk add --no-cache git
 
 WORKDIR /app
 
+# Build argument for git repository URL
+ARG GIT_REPO_URL=https://github.com/sebastianluebbert/RC-Dash.git
+
 # Copy package files
 COPY package*.json ./
 
@@ -33,8 +36,12 @@ RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src/database/schema.sql ./dist/database/
 
-# Copy git repository for version info
-COPY .git ./.git
+# Clone repository for version info (shallow clone)
+RUN git clone --depth 1 --branch main ${GIT_REPO_URL} /tmp/repo && \
+    cp -r /tmp/repo/.git ./.git && \
+    rm -rf /tmp/repo
+
+# Copy package.json for version info
 COPY package.json ./package.json
 
 # Create non-root user
