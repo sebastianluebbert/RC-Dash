@@ -178,6 +178,22 @@ The script automatically:
 
 See [CONVENTIONAL_COMMITS.md](CONVENTIONAL_COMMITS.md) for detailed guide.
 
+#### Release Notes
+
+Generate formatted release notes for GitHub:
+
+```bash
+# Generate release notes
+chmod +x generate-release-notes.sh
+./generate-release-notes.sh v1.2.3
+
+# Publish to GitHub (requires GitHub CLI)
+chmod +x publish-release.sh
+./publish-release.sh v1.2.3
+```
+
+The release notes are automatically categorized by commit type with links to commits.
+
 ## 🔄 Updates
 
 ```bash

@@ -161,7 +161,51 @@ git tag -a v2.0.0-rc.1 -m "Release candidate"
 
 ## Changelog Generation
 
-The auto-versioning script generates release notes automatically, but you should also maintain a `CHANGELOG.md`:
+### Automatic Release Notes
+
+RexCloud includes a release notes generator that creates formatted GitHub release notes:
+
+```bash
+# Generate release notes for latest tag
+./generate-release-notes.sh
+
+# Generate release notes for specific tag
+./generate-release-notes.sh v1.2.3
+
+# Generate release notes between two tags
+./generate-release-notes.sh v1.2.0 v1.2.3
+```
+
+The generator automatically categorizes commits:
+- ⚠️ **Breaking Changes**: `feat!:`, `fix!:`, or commits with `BREAKING CHANGE:`
+- ✨ **New Features**: `feat:` commits
+- 🐛 **Bug Fixes**: `fix:` commits
+- ⚡ **Performance**: `perf:` commits
+- ♻️ **Refactoring**: `refactor:` commits
+- 📚 **Documentation**: `docs:` commits
+- 💄 **Styling**: `style:` commits
+- ✅ **Tests**: `test:` commits
+- 📦 **Dependencies**: `build:`, `deps:`, `chore(deps):` commits
+
+### Publishing to GitHub
+
+If you have the [GitHub CLI](https://cli.github.com/) installed:
+
+```bash
+# Publish release to GitHub
+chmod +x publish-release.sh
+./publish-release.sh v1.2.3
+```
+
+This will:
+1. Generate release notes automatically
+2. Create a GitHub release
+3. Upload release notes
+4. Provide a link to the release
+
+### Manual Changelog
+
+You should also maintain a `CHANGELOG.md`:
 
 ```markdown
 # Changelog

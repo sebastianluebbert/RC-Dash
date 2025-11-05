@@ -195,8 +195,24 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo -e "${GREEN}🎉 Version ${NEW_TAG} created successfully!${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
+
+# Generate GitHub-formatted release notes
+read -p "Generate GitHub release notes? (y/N) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  if [ -f "generate-release-notes.sh" ]; then
+    chmod +x generate-release-notes.sh
+    ./generate-release-notes.sh "$NEW_TAG"
+  else
+    echo -e "${YELLOW}⚠️  generate-release-notes.sh not found${NC}"
+    echo "   Create it from the repository or download it manually"
+  fi
+fi
+
+echo ""
 echo "Next steps:"
-echo "  1. Update CHANGELOG.md if needed"
-echo "  2. Create a GitHub release (optional)"
-echo "  3. Deploy the new version"
+echo "  1. Review the version tag: git show ${NEW_TAG}"
+echo "  2. Update CHANGELOG.md if needed"
+echo "  3. Create a GitHub release with: ./generate-release-notes.sh ${NEW_TAG}"
+echo "  4. Deploy the new version"
 echo ""
