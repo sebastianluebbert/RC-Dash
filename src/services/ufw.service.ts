@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import apiClient from '@/lib/api-client';
 
 export interface UFWRule {
   number?: string;
@@ -18,49 +18,33 @@ export interface UFWStatus {
 
 export const ufwService = {
   async getStatus(serverId: string): Promise<UFWStatus> {
-    const { data, error } = await supabase.functions.invoke('ufw-manage', {
-      body: {
-        serverId,
-        action: 'status',
-      },
+    const response = await apiClient.post('/ufw/manage', {
+      serverId,
+      action: 'status',
     });
-
-    if (error) throw error;
-    return data;
+    return response.data;
   },
 
   async listRules(serverId: string): Promise<UFWRule[]> {
-    const { data, error } = await supabase.functions.invoke('ufw-manage', {
-      body: {
-        serverId,
-        action: 'list',
-      },
+    const response = await apiClient.post('/ufw/manage', {
+      serverId,
+      action: 'list',
     });
-
-    if (error) throw error;
-    return data.rules || [];
+    return response.data.rules || [];
   },
 
   async enableFirewall(serverId: string): Promise<void> {
-    const { error } = await supabase.functions.invoke('ufw-manage', {
-      body: {
-        serverId,
-        action: 'enable',
-      },
+    await apiClient.post('/ufw/manage', {
+      serverId,
+      action: 'enable',
     });
-
-    if (error) throw error;
   },
 
   async disableFirewall(serverId: string): Promise<void> {
-    const { error } = await supabase.functions.invoke('ufw-manage', {
-      body: {
-        serverId,
-        action: 'disable',
-      },
+    await apiClient.post('/ufw/manage', {
+      serverId,
+      action: 'disable',
     });
-
-    if (error) throw error;
   },
 
   async addRule(
@@ -69,39 +53,27 @@ export const ufwService = {
     protocol: 'tcp' | 'udp' | 'any',
     from?: string
   ): Promise<void> {
-    const { error } = await supabase.functions.invoke('ufw-manage', {
-      body: {
-        serverId,
-        action: 'add',
-        port,
-        protocol,
-        from,
-      },
+    await apiClient.post('/ufw/manage', {
+      serverId,
+      action: 'add',
+      port,
+      protocol,
+      from,
     });
-
-    if (error) throw error;
   },
 
   async deleteRule(serverId: string, ruleNumber: string): Promise<void> {
-    const { error } = await supabase.functions.invoke('ufw-manage', {
-      body: {
-        serverId,
-        action: 'delete',
-        rule: ruleNumber,
-      },
+    await apiClient.post('/ufw/manage', {
+      serverId,
+      action: 'delete',
+      rule: ruleNumber,
     });
-
-    if (error) throw error;
   },
 
   async resetFirewall(serverId: string): Promise<void> {
-    const { error } = await supabase.functions.invoke('ufw-manage', {
-      body: {
-        serverId,
-        action: 'reset',
-      },
+    await apiClient.post('/ufw/manage', {
+      serverId,
+      action: 'reset',
     });
-
-    if (error) throw error;
   },
 };

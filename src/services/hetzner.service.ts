@@ -43,7 +43,22 @@ export interface HetznerNetwork {
   subnets: any[];
 }
 
+export interface DNSZone {
+  id: string;
+  name: string;
+  ttl: number;
+}
+
+export interface DNSRecord {
+  id: string;
+  name: string;
+  type: string;
+  value: string;
+  ttl: number;
+}
+
 export const hetznerService = {
+  // Server Management
   async getServers(): Promise<HetznerServer[]> {
     const response = await apiClient.get('/hetzner/servers');
     return response.data.servers;
@@ -69,13 +84,61 @@ export const hetznerService = {
     return response.data.metrics;
   },
 
+  // Firewall Management
   async getFirewalls(): Promise<HetznerFirewall[]> {
     const response = await apiClient.get('/hetzner/firewalls');
     return response.data.firewalls;
   },
 
+  async manageFirewall(data: {
+    action: 'create' | 'update' | 'delete' | 'attach' | 'detach';
+    firewallId?: number;
+    serverId?: number;
+    [key: string]: any;
+  }) {
+    const response = await apiClient.post('/hetzner/firewalls/manage', data);
+    return response.data;
+  },
+
+  // Network Management
   async getNetworks(): Promise<HetznerNetwork[]> {
     const response = await apiClient.get('/hetzner/networks');
     return response.data.networks;
+  },
+
+  async manageNetwork(data: {
+    action: 'create' | 'update' | 'delete' | 'attach' | 'detach';
+    networkId?: number;
+    serverId?: number;
+    [key: string]: any;
+  }) {
+    const response = await apiClient.post('/hetzner/networks/manage', data);
+    return response.data;
+  },
+
+  // DNS Management
+  async getDNSZones(): Promise<DNSZone[]> {
+    const response = await apiClient.get('/hetzner/dns/zones');
+    return response.data.zones || [];
+  },
+
+  async getDNSRecords(zoneId: string): Promise<DNSRecord[]> {
+    const response = await apiClient.get(`/hetzner/dns/zones/${zoneId}/records`);
+    return response.data.records || [];
+  },
+
+  async manageDNS(data: {
+    action: 'create' | 'update' | 'delete';
+    zoneId: string;
+    rrsetId?: string;
+    record?: {
+      name: string;
+      type: string;
+      ttl?: number;
+      value: string;
+    };
+  }) {
+    const response = await apiClient.post('/hetzner/dns/manage', data);
+    return response.data;
   },
 };
