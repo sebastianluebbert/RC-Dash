@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Shield } from "lucide-react";
 import { DNSProviderSettings } from "@/components/DNSProviderSettings";
 import { ProxmoxSettings } from "@/components/ProxmoxSettings";
 import { SystemUpdate } from "@/components/SystemUpdate";
+import { SSLCertificate } from "@/components/SSLCertificate";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -180,6 +181,10 @@ const Settings = () => {
           <TabsTrigger value="mail">Mail Server</TabsTrigger>
           <TabsTrigger value="plesk">Plesk Server</TabsTrigger>
           <TabsTrigger value="dns">DNS Provider</TabsTrigger>
+          <TabsTrigger value="ssl">
+            <Shield className="mr-2 h-4 w-4" />
+            SSL-Zertifikat
+          </TabsTrigger>
           <TabsTrigger value="system">System-Updates</TabsTrigger>
         </TabsList>
 
@@ -386,6 +391,10 @@ const Settings = () => {
 
         <TabsContent value="dns" className="space-y-6">
           <DNSProviderSettings />
+        </TabsContent>
+
+        <TabsContent value="ssl" className="space-y-6">
+          <SSLCertificate />
         </TabsContent>
 
         <TabsContent value="system" className="space-y-6">
