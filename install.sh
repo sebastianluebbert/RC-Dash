@@ -113,10 +113,20 @@ print_success "Repository ready"
 
 # Generate .env file
 print_info "Generating configuration..."
-if [ ! -f .env ]; then
-    DB_PASSWORD=$(generate_password)
-    JWT_SECRET=$(generate_password)
-    ENCRYPTION_KEY=$(generate_password)
+
+# Check if .env exists and has the required variables
+if [ -f .env ]; then
+    source .env 2>/dev/null || true
+fi
+
+# Generate passwords if they don't exist
+if [ -z "$DB_PASSWORD" ] || [ -z "$JWT_SECRET" ] || [ -z "$ENCRYPTION_KEY" ]; then
+    print_info "Generating missing credentials..."
+    
+    # Only generate if not set
+    DB_PASSWORD=${DB_PASSWORD:-$(generate_password)}
+    JWT_SECRET=${JWT_SECRET:-$(generate_password)}
+    ENCRYPTION_KEY=${ENCRYPTION_KEY:-$(generate_password)}
     
     cat > .env << EOF
 # Database Configuration
@@ -148,13 +158,6 @@ fi
 set -a
 source .env
 set +a
-
-# Verify critical environment variables are set
-if [ -z "$DB_PASSWORD" ] || [ -z "$JWT_SECRET" ] || [ -z "$ENCRYPTION_KEY" ]; then
-    print_error "Critical environment variables are not set in .env file"
-    echo "Please check your .env file and ensure DB_PASSWORD, JWT_SECRET, and ENCRYPTION_KEY are configured"
-    exit 1
-fi
 
 # Check Docker permissions
 if ! docker ps &> /dev/null; then
