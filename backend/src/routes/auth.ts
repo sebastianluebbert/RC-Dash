@@ -64,7 +64,7 @@ authRouter.post('/register', async (req, res, next) => {
     const token = jwt.sign(
       { id: user.id, email: user.email },
       jwtSecret,
-      { expiresIn: jwtExpiresIn }
+      { expiresIn: jwtExpiresIn } as jwt.SignOptions
     );
 
     res.status(201).json({
@@ -121,7 +121,7 @@ authRouter.post('/login', async (req, res, next) => {
     const token = jwt.sign(
       { id: user.id, email: user.email },
       jwtSecret,
-      { expiresIn: jwtExpiresIn }
+      { expiresIn: jwtExpiresIn } as jwt.SignOptions
     );
 
     res.json({
