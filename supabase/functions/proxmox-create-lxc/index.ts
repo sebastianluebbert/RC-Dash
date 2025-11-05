@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateAdmin } from '../_shared/auth.ts';
+import { proxmoxCreateLXCSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,11 +14,16 @@ serve(async (req) => {
   }
 
   try {
-    const { node, vmid, hostname, cores, memory, disk, ostemplate, password } = await req.json();
-
-    if (!node || !vmid || !hostname || !ostemplate) {
-      throw new Error('Missing required parameters: node, vmid, hostname, ostemplate');
+    // Authenticate and authorize admin
+    const authResult = await authenticateAdmin(req, corsHeaders);
+    if (!authResult.success) {
+      return authResult.response;
     }
+
+    // Validate input
+    const body = await req.json();
+    const validated = proxmoxCreateLXCSchema.parse(body);
+    const { node, vmid, hostname, cores, memory, disk, ostemplate, password } = validated;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -54,7 +61,7 @@ serve(async (req) => {
     });
 
     if (!authResponse.ok) {
-      throw new Error(`Proxmox authentication failed: ${authResponse.status}`);
+      throw new Error(`Proxmox authentication failed`);
     }
 
     const authData = await authResponse.json();
@@ -93,9 +100,8 @@ serve(async (req) => {
     });
 
     if (!createResponse.ok) {
-      const errorText = await createResponse.text();
-      console.error('LXC creation failed:', errorText);
-      throw new Error(`Failed to create LXC: ${createResponse.status}`);
+      console.error('LXC creation failed');
+      throw new Error(`Failed to create LXC`);
     }
 
     const result = await createResponse.json();
@@ -118,9 +124,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in proxmox-create-lxc:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      }),
+      JSON.stringify({ error: 'An error occurred while creating LXC container' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateAdmin } from '../_shared/auth.ts';
+import { proxmoxCreateVMSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,11 +14,16 @@ serve(async (req) => {
   }
 
   try {
-    const { node, vmid, name, cores, memory, disk, ostype } = await req.json();
-
-    if (!node || !vmid || !name) {
-      throw new Error('Missing required parameters: node, vmid, name');
+    // Authenticate and authorize admin
+    const authResult = await authenticateAdmin(req, corsHeaders);
+    if (!authResult.success) {
+      return authResult.response;
     }
+
+    // Validate input
+    const body = await req.json();
+    const validated = proxmoxCreateVMSchema.parse(body);
+    const { node, vmid, name, cores, memory, disk, ostype } = validated;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -54,7 +61,7 @@ serve(async (req) => {
     });
 
     if (!authResponse.ok) {
-      throw new Error(`Proxmox authentication failed: ${authResponse.status}`);
+      throw new Error(`Proxmox authentication failed`);
     }
 
     const authData = await authResponse.json();
@@ -86,9 +93,8 @@ serve(async (req) => {
     });
 
     if (!createResponse.ok) {
-      const errorText = await createResponse.text();
-      console.error('VM creation failed:', errorText);
-      throw new Error(`Failed to create VM: ${createResponse.status}`);
+      console.error('VM creation failed');
+      throw new Error(`Failed to create VM`);
     }
 
     const result = await createResponse.json();
@@ -111,9 +117,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in proxmox-create-vm:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      }),
+      JSON.stringify({ error: 'An error occurred while creating VM' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

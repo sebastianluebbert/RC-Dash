@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateAdmin } from '../_shared/auth.ts';
+import { proxmoxControlSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,15 +14,16 @@ serve(async (req) => {
   }
 
   try {
-    const { node, vmid, type, action } = await req.json();
-
-    if (!node || !vmid || !type || !action) {
-      throw new Error('Missing required parameters: node, vmid, type, action');
+    // Authenticate and authorize admin
+    const authResult = await authenticateAdmin(req, corsHeaders);
+    if (!authResult.success) {
+      return authResult.response;
     }
 
-    if (!['start', 'stop', 'shutdown', 'reboot'].includes(action)) {
-      throw new Error('Invalid action. Must be: start, stop, shutdown, or reboot');
-    }
+    // Validate input
+    const body = await req.json();
+    const validated = proxmoxControlSchema.parse(body);
+    const { node, vmid, type, action } = validated;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -58,7 +61,7 @@ serve(async (req) => {
     });
 
     if (!authResponse.ok) {
-      throw new Error(`Proxmox authentication failed: ${authResponse.status}`);
+      throw new Error(`Proxmox authentication failed`);
     }
 
     const authData = await authResponse.json();
@@ -79,9 +82,8 @@ serve(async (req) => {
     });
 
     if (!actionResponse.ok) {
-      const errorText = await actionResponse.text();
-      console.error('Proxmox action failed:', errorText);
-      throw new Error(`Failed to ${action} ${type}: ${actionResponse.status}`);
+      console.error('Proxmox action failed');
+      throw new Error(`Failed to ${action} ${type}`);
     }
 
     const result = await actionResponse.json();
@@ -105,9 +107,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in proxmox-control:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      }),
+      JSON.stringify({ error: 'An error occurred while controlling the resource' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

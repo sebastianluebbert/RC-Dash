@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateAdmin } from '../_shared/auth.ts';
+import { vncTicketSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,11 +14,16 @@ serve(async (req) => {
   }
 
   try {
-    const { node, vmid, type } = await req.json();
-
-    if (!node || !vmid || !type) {
-      throw new Error('Missing required parameters: node, vmid, type');
+    // Authenticate and authorize admin
+    const authResult = await authenticateAdmin(req, corsHeaders);
+    if (!authResult.success) {
+      return authResult.response;
     }
+
+    // Validate input
+    const body = await req.json();
+    const validated = vncTicketSchema.parse(body);
+    const { node, vmid, type } = validated;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -54,7 +61,7 @@ serve(async (req) => {
     });
 
     if (!authResponse.ok) {
-      throw new Error(`Proxmox authentication failed: ${authResponse.status}`);
+      throw new Error(`Proxmox authentication failed`);
     }
 
     const authData = await authResponse.json();
@@ -79,9 +86,8 @@ serve(async (req) => {
     });
 
     if (!vncResponse.ok) {
-      const errorText = await vncResponse.text();
-      console.error('VNC ticket failed:', errorText);
-      throw new Error(`Failed to get VNC ticket: ${vncResponse.status}`);
+      console.error('VNC ticket failed');
+      throw new Error(`Failed to get VNC ticket`);
     }
 
     const vncData = await vncResponse.json();
@@ -93,7 +99,7 @@ serve(async (req) => {
     const hostWithoutProtocol = PROXMOX_HOST.replace('https://', '').replace('http://', '');
     const wsUrl = `${wsProtocol}${hostWithoutProtocol}/api2/json/nodes/${node}/${type}/${vmid}/vncwebsocket?port=${vncData.data.port}&vncticket=${encodeURIComponent(vncData.data.ticket)}`;
 
-    console.log('VNC WebSocket URL constructed:', wsUrl);
+    console.log('VNC WebSocket URL constructed');
 
     return new Response(
       JSON.stringify({ 
@@ -112,9 +118,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in proxmox-vnc-ticket:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      }),
+      JSON.stringify({ error: 'An error occurred while generating VNC ticket' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

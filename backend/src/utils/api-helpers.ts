@@ -10,17 +10,16 @@ export function handleApiError(res: Response, error: any, defaultMessage: string
   if (error instanceof z.ZodError) {
     return res.status(400).json({ 
       error: 'Invalid request data', 
-      details: error.errors 
+      details: process.env.NODE_ENV === 'development' ? error.errors : undefined
     });
   }
   
   const status = error.status || 500;
-  const message = error.message || defaultMessage;
+  const message = process.env.NODE_ENV === 'production' 
+    ? 'An internal error occurred' 
+    : (error.message || defaultMessage);
   
-  res.status(status).json({ 
-    error: message,
-    ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
-  });
+  res.status(status).json({ error: message });
 }
 
 /**

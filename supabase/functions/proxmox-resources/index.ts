@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateAdmin } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,12 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate and authorize admin
+    const authResult = await authenticateAdmin(req, corsHeaders);
+    if (!authResult.success) {
+      return authResult.response;
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -62,7 +69,7 @@ serve(async (req) => {
       });
 
       if (!authResponse.ok) {
-        console.error(`Authentication failed for node ${node.name}: ${authResponse.status}`);
+        console.error(`Authentication failed for node ${node.name}`);
         continue;
       }
 
@@ -78,7 +85,7 @@ serve(async (req) => {
       });
 
       if (!resourcesResponse.ok) {
-        console.error(`Failed to fetch resources from ${node.name}: ${resourcesResponse.status}`);
+        console.error(`Failed to fetch resources from ${node.name}`);
         continue;
       }
 
@@ -151,10 +158,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in proxmox-resources:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error',
-        details: error instanceof Error ? error.stack : undefined
-      }),
+      JSON.stringify({ error: 'An error occurred while fetching resources' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
