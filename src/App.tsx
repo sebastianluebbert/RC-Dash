@@ -12,6 +12,8 @@ import Index from "./pages/Index";
 import Servers from "./pages/Servers";
 import ServerDetail from "./pages/ServerDetail";
 import HetznerServerDetail from "./pages/HetznerServerDetail";
+import HetznerServers from "./pages/HetznerServers";
+import Customers from "./pages/Customers";
 import NotFound from "./pages/NotFound";
 import Domains from "./pages/Domains";
 import DomainsDNS from "./pages/DomainsDNS";
@@ -76,8 +78,10 @@ const App = () => (
                           <Route path="/" element={<Index />} />
                           <Route path="/servers" element={<Servers />} />
                           <Route path="/server/:node" element={<ServerDetail />} />
+                          <Route path="/hetzner" element={<HetznerServers />} />
                           <Route path="/hetzner-server/:serverId" element={<HetznerServerDetail />} />
                           <Route path="/helper-scripts" element={<HelperScripts />} />
+                          <Route path="/customers" element={<Customers />} />
                           <Route path="/domains" element={<Domains />} />
                           <Route path="/domains/dns" element={<DomainsDNS />} />
                           <Route path="/domains/transfers" element={<NotFound />} />

@@ -14,12 +14,14 @@ import {
   Mail,
   LogOut,
   Globe as WebIcon,
+  Cloud,
 } from "lucide-react";
 import rexcloudLogo from "@/assets/rexcloud-logo.png";
 import proxmoxFavicon from "@/assets/proxmox-favicon.png";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { proxmoxService } from "@/services/proxmox.service";
 
 import {
   Sidebar,
@@ -114,21 +116,12 @@ export function AppSidebar() {
   const { data: servers } = useQuery({
     queryKey: ['servers'],
     queryFn: async () => {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proxmox-resources`,
-        {
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
+      try {
+        const data = await proxmoxService.getResources();
+        return data.servers as ServerData[];
+      } catch (error) {
         return [];
       }
-
-      const data = await response.json();
-      return data.servers as ServerData[];
     },
   });
 
@@ -185,6 +178,26 @@ export function AppSidebar() {
                   <NavLink to="/helper-scripts">
                     <PackagePlus className="h-5 w-5" />
                     <span className="text-base">Helper Scripts</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {/* Hetzner Cloud */}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/hetzner')} className="py-3 px-4">
+                  <NavLink to="/hetzner">
+                    <Cloud className="h-5 w-5" />
+                    <span className="text-base">Hetzner Cloud</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {/* Customers */}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/customers')} className="py-3 px-4">
+                  <NavLink to="/customers">
+                    <Users className="h-5 w-5" />
+                    <span className="text-base">Kunden</span>
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>

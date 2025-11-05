@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Play, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { scriptsService, HelperScript } from "@/services/scripts.service";
+import { proxmoxService } from "@/services/proxmox.service";
 import {
   Dialog,
   DialogContent,
@@ -21,176 +24,83 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface HelperScript {
-  name: string;
-  category: string;
-  description: string;
-  scriptUrl: string;
-  type: 'ct' | 'vm' | 'install' | 'misc';
-}
-
-const HELPER_SCRIPTS: HelperScript[] = [
-  {
-    name: "Home Assistant",
-    category: "Home Automation",
-    description: "Home Assistant Core installation",
-    scriptUrl: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/homeassistant-core.sh",
-    type: "ct"
-  },
-  {
-    name: "Docker",
-    category: "Container",
-    description: "Docker LXC container",
-    scriptUrl: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/docker.sh",
-    type: "ct"
-  },
-  {
-    name: "Portainer",
-    category: "Container Management",
-    description: "Portainer Docker UI",
-    scriptUrl: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/portainer.sh",
-    type: "ct"
-  },
-  {
-    name: "Nginx Proxy Manager",
-    category: "Reverse Proxy",
-    description: "Nginx Proxy Manager",
-    scriptUrl: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/nginxproxymanager.sh",
-    type: "ct"
-  },
-  {
-    name: "AdGuard Home",
-    category: "DNS",
-    description: "AdGuard Home DNS blocker",
-    scriptUrl: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/adguard.sh",
-    type: "ct"
-  },
-  {
-    name: "Pi-hole",
-    category: "DNS",
-    description: "Pi-hole DNS blocker",
-    scriptUrl: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/pihole.sh",
-    type: "ct"
-  },
-  {
-    name: "Plex",
-    category: "Media Server",
-    description: "Plex Media Server",
-    scriptUrl: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/plex.sh",
-    type: "ct"
-  },
-  {
-    name: "Jellyfin",
-    category: "Media Server",
-    description: "Jellyfin Media Server",
-    scriptUrl: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/jellyfin.sh",
-    type: "ct"
-  },
-  {
-    name: "Nextcloud",
-    category: "Cloud Storage",
-    description: "Nextcloud file sync and share",
-    scriptUrl: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/nextcloud.sh",
-    type: "ct"
-  },
-  {
-    name: "Vaultwarden",
-    category: "Password Manager",
-    description: "Vaultwarden (Bitwarden) password manager",
-    scriptUrl: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/vaultwarden.sh",
-    type: "ct"
-  },
-  {
-    name: "Uptime Kuma",
-    category: "Monitoring",
-    description: "Uptime monitoring tool",
-    scriptUrl: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/uptimekuma.sh",
-    type: "ct"
-  },
-  {
-    name: "Grafana",
-    category: "Monitoring",
-    description: "Grafana analytics platform",
-    scriptUrl: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/grafana.sh",
-    type: "ct"
-  },
-  {
-    name: "Post PVE Install",
-    category: "System",
-    description: "Post-installation setup for Proxmox VE",
-    scriptUrl: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/post-pve-install.sh",
-    type: "misc"
-  }
-];
-
 const HelperScripts = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedScript, setSelectedScript] = useState<HelperScript | null>(null);
   const [selectedNode, setSelectedNode] = useState<string>("");
-  const [isInstalling, setIsInstalling] = useState(false);
+  const [selectedVmid, setSelectedVmid] = useState<number>(0);
 
-  const categories = Array.from(new Set(HELPER_SCRIPTS.map(s => s.category)));
+  const { data: scripts } = useQuery({
+    queryKey: ['helper-scripts'],
+    queryFn: () => scriptsService.getAvailableScripts(),
+  });
+
+  const { data: nodes } = useQuery({
+    queryKey: ['proxmox-nodes'],
+    queryFn: () => proxmoxService.getNodes(),
+  });
+
+  const { data: servers } = useQuery({
+    queryKey: ['servers'],
+    queryFn: async () => {
+      const data = await proxmoxService.getResources();
+      return data.servers;
+    },
+  });
+
+  const categories = Array.from(new Set(scripts?.map(s => s.category) || []));
   
-  const filteredScripts = HELPER_SCRIPTS.filter(script => {
+  const filteredScripts = (scripts || []).filter(script => {
     const matchesSearch = script.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          script.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "all" || script.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const handleInstall = async () => {
-    if (!selectedScript || !selectedNode) {
+  const executeScriptMutation = useMutation({
+    mutationFn: ({ node, vmid, scriptUrl, scriptName }: any) =>
+      scriptsService.executeScript(node, vmid, scriptUrl, scriptName),
+    onSuccess: () => {
+      toast({
+        title: "Script wird ausgeführt",
+        description: "Das Script wurde erfolgreich gestartet",
+      });
+      setSelectedScript(null);
+      setSelectedNode("");
+      setSelectedVmid(0);
+    },
+    onError: (error: any) => {
       toast({
         title: "Fehler",
-        description: "Bitte wählen Sie einen Node aus",
+        description: error.response?.data?.error || "Script-Ausführung fehlgeschlagen",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleInstall = () => {
+    if (!selectedScript || !selectedNode || !selectedVmid) {
+      toast({
+        title: "Fehler",
+        description: "Bitte wählen Sie einen Server aus",
         variant: "destructive",
       });
       return;
     }
 
-    setIsInstalling(true);
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proxmox-execute-script`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            node: selectedNode,
-            scriptUrl: selectedScript.scriptUrl,
-            scriptName: selectedScript.name,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Installation fehlgeschlagen');
-      }
-
-      toast({
-        title: "Installation gestartet",
-        description: `${selectedScript.name} wird auf ${selectedNode} installiert`,
-      });
-
-      setSelectedScript(null);
-      setSelectedNode("");
-    } catch (error) {
-      console.error('Installation error:', error);
-      toast({
-        title: "Installation fehlgeschlagen",
-        description: error instanceof Error ? error.message : "Unbekannter Fehler",
-        variant: "destructive",
-      });
-    } finally {
-      setIsInstalling(false);
-    }
+    executeScriptMutation.mutate({
+      node: selectedNode,
+      vmid: selectedVmid,
+      scriptUrl: selectedScript.url,
+      scriptName: selectedScript.name,
+    });
   };
+
+  const nodeServers = servers?.filter(s => s.node === selectedNode) || [];
 
   return (
     <div className="flex-1 space-y-6 p-8">
@@ -269,27 +179,57 @@ const HelperScripts = () => {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">Node</label>
-              <Select value={selectedNode} onValueChange={setSelectedNode}>
+              <Select value={selectedNode} onValueChange={(v) => {
+                setSelectedNode(v);
+                setSelectedVmid(0);
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Node auswählen" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pve1">pve1</SelectItem>
+                  {nodes?.map((node) => (
+                    <SelectItem key={node.id} value={node.name}>
+                      {node.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+            
+            {selectedNode && (
+              <div>
+                <label className="text-sm font-medium">Server</label>
+                <Select value={selectedVmid.toString()} onValueChange={(v) => setSelectedVmid(parseInt(v))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Server auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {nodeServers.map((server) => (
+                      <SelectItem key={server.id} value={server.vmid.toString()}>
+                        {server.name} (VMID: {server.vmid})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <Button
                 onClick={handleInstall}
-                disabled={!selectedNode || isInstalling}
+                disabled={!selectedNode || !selectedVmid || executeScriptMutation.isPending}
                 className="flex-1"
               >
-                {isInstalling ? "Installiert..." : "Installation starten"}
+                {executeScriptMutation.isPending ? "Installiert..." : "Installation starten"}
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setSelectedScript(null)}
-                disabled={isInstalling}
+                onClick={() => {
+                  setSelectedScript(null);
+                  setSelectedNode("");
+                  setSelectedVmid(0);
+                }}
+                disabled={executeScriptMutation.isPending}
               >
                 Abbrechen
               </Button>
