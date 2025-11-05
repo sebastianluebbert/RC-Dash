@@ -2,13 +2,35 @@ import apiClient from '@/lib/api-client';
 
 export interface VersionInfo {
   version: string;
+  packageVersion: string;
   name: string;
+  gitTag: string | null;
+  commit: {
+    hash: string;
+    date: string;
+  } | null;
+}
+
+export interface VersionTag {
+  tag: string;
+  version: string;
+  date: string | null;
+  message: string;
+  commit: string | null;
+}
+
+export interface TagsResponse {
+  tags: VersionTag[];
+  total: number;
 }
 
 export interface UpdateCheck {
   hasUpdate: boolean;
   currentCommit: string;
   latestCommit: string;
+  currentVersion: string | null;
+  latestVersion: string | null;
+  hasVersionUpdate: boolean;
   updateInfo?: {
     available: boolean;
     commits: number;
@@ -62,9 +84,15 @@ const getChangelog = async (from?: string, to?: string): Promise<Changelog> => {
   return response.data;
 };
 
+const getTags = async (): Promise<TagsResponse> => {
+  const response = await apiClient.get('/api/system/tags');
+  return response.data;
+};
+
 export const systemService = {
   getVersion,
   checkForUpdates,
   performUpdate,
   getChangelog,
+  getTags,
 };

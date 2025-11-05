@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { systemService } from "@/services/system.service";
-import { RefreshCw, Download, CheckCircle2, AlertCircle, GitBranch, FileText } from "lucide-react";
+import { RefreshCw, Download, CheckCircle2, AlertCircle, GitBranch, FileText, Tag as TagIcon } from "lucide-react";
 import { ChangelogViewer } from "./ChangelogViewer";
+import { VersionHistory } from "./VersionHistory";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +24,7 @@ export const SystemUpdate = () => {
   const { toast } = useToast();
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   const { data: versionInfo, isLoading: versionLoading } = useQuery({
     queryKey: ['system-version'],
@@ -83,9 +85,22 @@ export const SystemUpdate = () => {
           <div className="flex items-center justify-between p-4 rounded-lg border border-border">
             <div>
               <p className="text-sm text-muted-foreground">Aktuelle Version</p>
-              <p className="text-lg font-semibold">
-                {versionLoading ? "Lädt..." : `v${versionInfo?.version}`}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-lg font-semibold">
+                  {versionLoading ? "Lädt..." : (versionInfo?.gitTag || `v${versionInfo?.version}`)}
+                </p>
+                {versionInfo?.gitTag && (
+                  <Badge variant="outline" className="text-xs">
+                    <TagIcon className="h-3 w-3 mr-1" />
+                    Release
+                  </Badge>
+                )}
+              </div>
+              {versionInfo?.commit && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Commit: {versionInfo.commit.hash}
+                </p>
+              )}
             </div>
             <Badge variant="outline">RexCloud</Badge>
           </div>
@@ -106,6 +121,11 @@ export const SystemUpdate = () => {
                   <AlertDescription>
                     {updateCheck.hasUpdate ? (
                       <div className="mt-2 space-y-2">
+                        {updateCheck.hasVersionUpdate && updateCheck.latestVersion && (
+                          <p className="font-semibold text-primary">
+                            Neue Version: {updateCheck.latestVersion}
+                          </p>
+                        )}
                         <p>
                           {updateCheck.updateInfo?.commits} neue Commits verfügbar
                         </p>
@@ -119,9 +139,14 @@ export const SystemUpdate = () => {
                         </div>
                       </div>
                     ) : (
-                      <p className="mt-1">
-                        Commit: {updateCheck.currentCommit}
-                      </p>
+                      <div className="mt-1 space-y-1">
+                        {updateCheck.currentVersion && (
+                          <p>Version: {updateCheck.currentVersion}</p>
+                        )}
+                        <p className="text-xs">
+                          Commit: {updateCheck.currentCommit}
+                        </p>
+                      </div>
                     )}
                   </AlertDescription>
                 </div>
@@ -153,15 +178,23 @@ export const SystemUpdate = () => {
             )}
           </div>
 
-          {/* Changelog Button */}
-          <Button
-            onClick={() => setShowChangelog(!showChangelog)}
-            variant="outline"
-            className="w-full"
-          >
-            <FileText className="mr-2 h-4 w-4" />
-            {showChangelog ? "Changelog ausblenden" : "Changelog anzeigen"}
-          </Button>
+          {/* Action Buttons */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              onClick={() => setShowChangelog(!showChangelog)}
+              variant="outline"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Changelog
+            </Button>
+            <Button
+              onClick={() => setShowVersionHistory(!showVersionHistory)}
+              variant="outline"
+            >
+              <TagIcon className="mr-2 h-4 w-4" />
+              Versionen
+            </Button>
+          </div>
 
           {/* Info Text */}
           <p className="text-xs text-muted-foreground">
@@ -202,6 +235,9 @@ export const SystemUpdate = () => {
           to={updateCheck?.latestCommit}
         />
       )}
+
+      {/* Version History */}
+      {showVersionHistory && <VersionHistory />}
     </div>
   );
 };
