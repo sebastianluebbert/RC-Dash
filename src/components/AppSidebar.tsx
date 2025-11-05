@@ -10,7 +10,6 @@ import {
   Users,
   CreditCard,
   Database,
-  PackagePlus,
   Mail,
   LogOut,
   Globe as WebIcon,
@@ -61,11 +60,6 @@ const menuItems = [
     title: "Websites",
     url: "/websites",
     icon: WebIcon,
-  },
-  {
-    title: "Helper Scripts",
-    url: "/helper-scripts",
-    icon: PackagePlus,
   },
   {
     title: "Domains",
@@ -168,16 +162,6 @@ export function AppSidebar() {
                   <NavLink to="/websites">
                     <WebIcon className="h-5 w-5" />
                     <span className="text-base">Websites</span>
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              {/* Helper Scripts */}
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/helper-scripts')} className="py-3 px-4">
-                  <NavLink to="/helper-scripts">
-                    <PackagePlus className="h-5 w-5" />
-                    <span className="text-base">Helper Scripts</span>
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>

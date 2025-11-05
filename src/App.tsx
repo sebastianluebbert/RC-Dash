@@ -18,7 +18,6 @@ import NotFound from "./pages/NotFound";
 import Domains from "./pages/Domains";
 import DomainsDNS from "./pages/DomainsDNS";
 import Settings from "./pages/Settings";
-import HelperScripts from "./pages/HelperScripts";
 import Mail from "./pages/Mail";
 import Auth from "./pages/Auth";
 import Websites from "./pages/Websites";
@@ -80,7 +79,6 @@ const App = () => (
                           <Route path="/server/:node" element={<ServerDetail />} />
                           <Route path="/hetzner" element={<HetznerServers />} />
                           <Route path="/hetzner-server/:serverId" element={<HetznerServerDetail />} />
-                          <Route path="/helper-scripts" element={<HelperScripts />} />
                           <Route path="/customers" element={<Customers />} />
                           <Route path="/domains" element={<Domains />} />
                           <Route path="/domains/dns" element={<DomainsDNS />} />
