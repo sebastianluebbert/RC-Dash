@@ -61,6 +61,81 @@ router.get('/check-update', authenticateToken, async (req, res) => {
   }
 });
 
+// Get changelog between versions
+router.get('/changelog', authenticateToken, async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    const range = from && to ? `${from}..${to}` : 'HEAD~10..HEAD';
+    
+    // Get detailed commit information
+    const { stdout } = await execAsync(
+      `git log ${range} --pretty=format:'{"commit":"%H","short":"%h","author":"%an","date":"%ai","message":"%s","body":"%b"},' --no-merges`
+    );
+    
+    if (!stdout.trim()) {
+      return res.json({ commits: [] });
+    }
+    
+    // Parse commits (remove trailing comma and wrap in array)
+    const commitsJson = '[' + stdout.trim().slice(0, -1) + ']';
+    const commits = JSON.parse(commitsJson);
+    
+    // Categorize commits
+    const categorized = commits.map((commit: any) => {
+      const msg = commit.message.toLowerCase();
+      let category = 'other';
+      let type = 'feature';
+      
+      if (msg.startsWith('feat:') || msg.includes('add') || msg.includes('new')) {
+        category = 'features';
+        type = 'feature';
+      } else if (msg.startsWith('fix:') || msg.includes('fix') || msg.includes('bug')) {
+        category = 'fixes';
+        type = 'fix';
+      } else if (msg.startsWith('docs:') || msg.includes('documentation')) {
+        category = 'documentation';
+        type = 'docs';
+      } else if (msg.startsWith('style:') || msg.includes('style') || msg.includes('ui')) {
+        category = 'improvements';
+        type = 'improvement';
+      } else if (msg.startsWith('refactor:') || msg.includes('refactor')) {
+        category = 'improvements';
+        type = 'refactor';
+      } else if (msg.startsWith('perf:') || msg.includes('performance')) {
+        category = 'improvements';
+        type = 'performance';
+      } else if (msg.startsWith('security:') || msg.includes('security')) {
+        category = 'security';
+        type = 'security';
+      }
+      
+      return {
+        ...commit,
+        category,
+        type
+      };
+    });
+    
+    // Group by category
+    const grouped = categorized.reduce((acc: any, commit: any) => {
+      if (!acc[commit.category]) {
+        acc[commit.category] = [];
+      }
+      acc[commit.category].push(commit);
+      return acc;
+    }, {});
+    
+    res.json({
+      commits: categorized,
+      grouped,
+      total: commits.length
+    });
+  } catch (error) {
+    console.error('Error fetching changelog:', error);
+    res.status(500).json({ error: 'Failed to fetch changelog' });
+  }
+});
+
 // Trigger update (requires admin role)
 router.post('/update', authenticateToken, async (req, res) => {
   try {
