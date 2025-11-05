@@ -59,10 +59,12 @@ authRouter.post('/register', async (req, res, next) => {
     );
 
     // Generate JWT
+    const jwtSecret = process.env.JWT_SECRET || 'default_secret_change_in_production';
+    const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '7d';
     const token = jwt.sign(
       { id: user.id, email: user.email },
-      process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      jwtSecret,
+      { expiresIn: jwtExpiresIn }
     );
 
     res.status(201).json({
@@ -114,10 +116,12 @@ authRouter.post('/login', async (req, res, next) => {
     const isAdmin = roleResult.rows.length > 0;
 
     // Generate JWT
+    const jwtSecret = process.env.JWT_SECRET || 'default_secret_change_in_production';
+    const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '7d';
     const token = jwt.sign(
       { id: user.id, email: user.email },
-      process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      jwtSecret,
+      { expiresIn: jwtExpiresIn }
     );
 
     res.json({

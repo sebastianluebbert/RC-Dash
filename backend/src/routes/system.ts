@@ -226,7 +226,7 @@ router.get('/changelog', authenticateToken, async (req, res) => {
 });
 
 // Trigger update (requires admin role)
-router.post('/update', authenticateToken, async (req, res) => {
+router.post('/update', authenticateToken, async (req: any, res) => {
   try {
     // Check if user is admin
     if (req.user?.role !== 'admin') {

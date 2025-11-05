@@ -37,7 +37,7 @@ async function getHetznerApiKey(): Promise<string> {
 }
 
 // Helper function to make Hetzner API requests
-async function hetznerRequest(endpoint: string, options: any = {}) {
+async function hetznerRequest(endpoint: string, options: any = {}): Promise<any> {
   const apiKey = await getHetznerApiKey();
   
   const response = await fetch(`https://api.hetzner.cloud/v1${endpoint}`, {
@@ -50,7 +50,7 @@ async function hetznerRequest(endpoint: string, options: any = {}) {
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error: any = await response.json();
     throw new Error(error.error?.message || 'Hetzner API request failed');
   }
 
@@ -60,7 +60,7 @@ async function hetznerRequest(endpoint: string, options: any = {}) {
 // Get all servers
 hetznerRouter.get('/servers', async (req: AuthRequest, res) => {
   try {
-    const data = await hetznerRequest('/servers');
+    const data: any = await hetznerRequest('/servers');
     res.json({ servers: data.servers });
   } catch (error: any) {
     console.error('Hetzner servers error:', error);
@@ -75,7 +75,7 @@ hetznerRouter.get('/servers', async (req: AuthRequest, res) => {
 hetznerRouter.get('/servers/:id', async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    const data = await hetznerRequest(`/servers/${id}`);
+    const data: any = await hetznerRequest(`/servers/${id}`);
     res.json({ server: data.server });
   } catch (error: any) {
     console.error('Hetzner server details error:', error);
@@ -91,7 +91,7 @@ hetznerRouter.post('/servers/action', async (req: AuthRequest, res) => {
   try {
     const validated = serverActionSchema.parse(req.body);
     
-    const data = await hetznerRequest(`/servers/${validated.serverId}/actions/${validated.action}`, {
+    const data: any = await hetznerRequest(`/servers/${validated.serverId}/actions/${validated.action}`, {
       method: 'POST',
     });
 
@@ -123,7 +123,7 @@ hetznerRouter.get('/servers/:id/metrics', async (req: AuthRequest, res) => {
       end: end as string,
     });
 
-    const data = await hetznerRequest(`/servers/${id}/metrics?${params}`);
+    const data: any = await hetznerRequest(`/servers/${id}/metrics?${params}`);
     res.json({ metrics: data.metrics });
   } catch (error: any) {
     console.error('Hetzner metrics error:', error);
@@ -137,7 +137,7 @@ hetznerRouter.get('/servers/:id/metrics', async (req: AuthRequest, res) => {
 // Get firewalls
 hetznerRouter.get('/firewalls', async (req: AuthRequest, res) => {
   try {
-    const data = await hetznerRequest('/firewalls');
+    const data: any = await hetznerRequest('/firewalls');
     res.json({ firewalls: data.firewalls });
   } catch (error: any) {
     console.error('Hetzner firewalls error:', error);
@@ -151,7 +151,7 @@ hetznerRouter.get('/firewalls', async (req: AuthRequest, res) => {
 // Get networks
 hetznerRouter.get('/networks', async (req: AuthRequest, res) => {
   try {
-    const data = await hetznerRequest('/networks');
+    const data: any = await hetznerRequest('/networks');
     res.json({ networks: data.networks });
   } catch (error: any) {
     console.error('Hetzner networks error:', error);
