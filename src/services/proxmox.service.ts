@@ -57,18 +57,34 @@ export const proxmoxService = {
     return response.data;
   },
 
-  async controlVM(vmid: number, node: string, action: 'start' | 'stop' | 'reboot' | 'shutdown') {
-    const response = await apiClient.post('/proxmox/control', { vmid, node, action });
+  async controlVM(vmid: number, node: string, type: 'qemu' | 'lxc', action: 'start' | 'stop' | 'reboot' | 'shutdown') {
+    const response = await apiClient.post('/proxmox/control', { vmid, node, type, action });
     return response.data;
   },
 
   async createLXC(data: any) {
-    const response = await apiClient.post('/proxmox/lxc', data);
+    const response = await apiClient.post('/proxmox/lxc/create', data);
     return response.data;
   },
 
   async createVM(data: any) {
-    const response = await apiClient.post('/proxmox/vm', data);
+    const response = await apiClient.post('/proxmox/vm/create', data);
+    return response.data;
+  },
+
+  // VNC Management
+  async getVNCTicket(node: string, vmid: number, type: 'qemu' | 'lxc') {
+    const response = await apiClient.post('/proxmox/vnc/ticket', { node, vmid, type });
+    return response.data;
+  },
+
+  // Script Execution
+  async executeScript(node: string, scriptUrl: string, scriptName: string) {
+    const response = await apiClient.post('/proxmox/execute-script', {
+      node,
+      scriptUrl,
+      scriptName,
+    });
     return response.data;
   },
 };

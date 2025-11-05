@@ -482,3 +482,194 @@ proxmoxRouter.post('/vm/create', async (req: AuthRequest, res, next) => {
     next(error);
   }
 });
+
+// Get VNC ticket
+const vncTicketSchema = z.object({
+  node: z.string().min(1).max(50).regex(/^[a-zA-Z0-9-_.]+$/),
+  vmid: z.number().int().positive(),
+  type: z.enum(['qemu', 'lxc']),
+});
+
+proxmoxRouter.post('/vnc/ticket', async (req: AuthRequest, res, next) => {
+  try {
+    const validated = vncTicketSchema.parse(req.body);
+    const { node, vmid, type } = validated;
+
+    // Get Proxmox node configuration
+    const nodeResult = await query(
+      'SELECT host, port, username, password_encrypted, realm FROM proxmox_nodes WHERE name = $1',
+      [node]
+    );
+
+    if (nodeResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Proxmox node not found' });
+    }
+
+    const nodeConfig = nodeResult.rows[0];
+    const password = decrypt(nodeConfig.password_encrypted);
+
+    // Authenticate with Proxmox
+    const authResponse = await fetch(
+      `${nodeConfig.host}:${nodeConfig.port}/api2/json/access/ticket`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          username: nodeConfig.username,
+          password: password,
+          realm: nodeConfig.realm,
+        }),
+      }
+    );
+
+    if (!authResponse.ok) {
+      throw new Error('Proxmox authentication failed');
+    }
+
+    const authData: any = await authResponse.json();
+
+    // Get VNC ticket
+    const vncEndpoint = type === 'qemu'
+      ? `${nodeConfig.host}:${nodeConfig.port}/api2/json/nodes/${node}/qemu/${vmid}/vncproxy`
+      : `${nodeConfig.host}:${nodeConfig.port}/api2/json/nodes/${node}/lxc/${vmid}/vncproxy`;
+
+    const vncResponse = await fetch(vncEndpoint, {
+      method: 'POST',
+      headers: {
+        'Cookie': `PVEAuthCookie=${authData.data.ticket}`,
+        'CSRFPreventionToken': authData.data.CSRFPreventionToken,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        websocket: '1',
+      }),
+    });
+
+    if (!vncResponse.ok) {
+      throw new Error('Failed to get VNC ticket');
+    }
+
+    const vncData: any = await vncResponse.json();
+
+    // Construct WebSocket URL
+    const wsProtocol = nodeConfig.host.startsWith('https://') ? 'wss://' : 'ws://';
+    const hostWithoutProtocol = nodeConfig.host.replace('https://', '').replace('http://', '');
+    const wsUrl = `${wsProtocol}${hostWithoutProtocol}:${nodeConfig.port}/api2/json/nodes/${node}/${type}/${vmid}/vncwebsocket?port=${vncData.data.port}&vncticket=${encodeURIComponent(vncData.data.ticket)}`;
+
+    res.json({
+      success: true,
+      ticket: vncData.data.ticket,
+      port: vncData.data.port,
+      wsUrl: wsUrl,
+      upid: vncData.data.upid,
+      csrfToken: authData.data.CSRFPreventionToken,
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid request data', details: error.errors });
+    }
+    next(error);
+  }
+});
+
+// Execute helper script
+const ALLOWED_SCRIPT_DOMAINS = [
+  'raw.githubusercontent.com',
+  'gist.githubusercontent.com',
+];
+
+const executeScriptSchema = z.object({
+  node: z.string().min(1).max(50).regex(/^[a-zA-Z0-9-_.]+$/),
+  scriptUrl: z.string().url().refine(
+    (url) => {
+      try {
+        const domain = new URL(url).hostname;
+        return ALLOWED_SCRIPT_DOMAINS.includes(domain);
+      } catch {
+        return false;
+      }
+    },
+    { message: `Script URL must be from allowed domains: ${ALLOWED_SCRIPT_DOMAINS.join(', ')}` }
+  ),
+  scriptName: z.string().min(1).max(100),
+});
+
+proxmoxRouter.post('/execute-script', async (req: AuthRequest, res, next) => {
+  try {
+    const validated = executeScriptSchema.parse(req.body);
+    const { node, scriptUrl, scriptName } = validated;
+
+    // Get Proxmox node configuration
+    const nodeResult = await query(
+      'SELECT host, port, username, password_encrypted, realm FROM proxmox_nodes WHERE name = $1',
+      [node]
+    );
+
+    if (nodeResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Proxmox node not found' });
+    }
+
+    const nodeConfig = nodeResult.rows[0];
+    const password = decrypt(nodeConfig.password_encrypted);
+
+    console.log(`Executing helper script ${scriptName} on node ${node}`);
+
+    // Authenticate with Proxmox
+    const authResponse = await fetch(
+      `${nodeConfig.host}:${nodeConfig.port}/api2/json/access/ticket`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          username: nodeConfig.username,
+          password: password,
+          realm: nodeConfig.realm,
+        }),
+      }
+    );
+
+    if (!authResponse.ok) {
+      throw new Error('Proxmox authentication failed');
+    }
+
+    const authData: any = await authResponse.json();
+
+    // Execute the script via Proxmox API
+    const command = `bash -c "$(wget -qLO - ${scriptUrl})"`;
+
+    const executeResponse = await fetch(
+      `${nodeConfig.host}:${nodeConfig.port}/api2/json/nodes/${node}/execute`,
+      {
+        method: 'POST',
+        headers: {
+          'Cookie': `PVEAuthCookie=${authData.data.ticket}`,
+          'CSRFPreventionToken': authData.data.CSRFPreventionToken,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          commands: command,
+        }),
+      }
+    );
+
+    if (!executeResponse.ok) {
+      const errorText = await executeResponse.text();
+      console.error('Script execution failed:', errorText);
+      throw new Error(`Failed to execute script: ${executeResponse.status}`);
+    }
+
+    const executeData: any = await executeResponse.json();
+    console.log(`Script execution started successfully`);
+
+    res.json({
+      success: true,
+      message: `Script ${scriptName} wird ausgeführt`,
+      data: executeData.data,
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid request data', details: error.errors });
+    }
+    next(error);
+  }
+});

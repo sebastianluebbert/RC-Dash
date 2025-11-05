@@ -3,30 +3,18 @@ import apiClient from '@/lib/api-client';
 export interface VNCTicket {
   ticket: string;
   port: number;
+  wsUrl: string;
   upid: string;
-  node: string;
-  vmid: number;
-  vncwebsocket: any;
-}
-
-export interface VNCProxy {
-  host: string;
-  port: number;
-  node: string;
-  vmid: number;
+  csrfToken: string;
 }
 
 export const vncService = {
-  async getVNCTicket(node: string, vmid: number): Promise<VNCTicket> {
-    const response = await apiClient.post('/vnc/ticket', {
+  async getTicket(node: string, vmid: number, type: 'qemu' | 'lxc'): Promise<VNCTicket> {
+    const response = await apiClient.post('/proxmox/vnc/ticket', {
       node,
       vmid,
+      type,
     });
-    return response.data;
-  },
-
-  async getVNCProxy(node: string, vmid: number): Promise<VNCProxy> {
-    const response = await apiClient.get(`/vnc/proxy/${node}/${vmid}`);
     return response.data;
   },
 };
