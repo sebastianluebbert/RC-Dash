@@ -5,7 +5,7 @@
 
 set -e
 
-echo "🚀 RexCloud Installation Script"
+echo "🚀 RC-Dash Installation Script"
 echo "================================"
 
 # Check if running as root
@@ -103,7 +103,7 @@ if [ -d "$INSTALL_DIR" ]; then
     git pull
 else
     print_info "Cloning RC-Dash repository..."
-    git clone https://github.com/yourusername/RC-Dash.git "$INSTALL_DIR"
+    git clone https://github.com/sebastianluebbert/RC-Dash.git "$INSTALL_DIR"
     cd "$INSTALL_DIR"
 fi
 print_success "Repository ready"
