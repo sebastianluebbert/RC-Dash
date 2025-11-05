@@ -158,11 +158,11 @@ const Servers = () => {
         {Object.entries(nodeStats).map(([node, stats]) => (
           <Card 
             key={node} 
-            className="cursor-pointer border-border bg-card transition-all hover:shadow-[var(--shadow-glow)]"
+            className="cursor-pointer transition-all hover:shadow-[var(--shadow-glow)]"
             onClick={() => navigate(`/server/${node}`)}
           >
             <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${viewMode === "compact" ? "pb-2" : "pb-2"}`}>
-              <CardTitle className={`font-semibold text-card-foreground ${viewMode === "compact" ? "text-base" : "text-lg"}`}>
+              <CardTitle className={`font-semibold ${viewMode === "compact" ? "text-base" : "text-lg"}`}>
                 {node}
               </CardTitle>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -172,19 +172,19 @@ const Servers = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Gesamt:</span>
-                    <span className="font-medium text-card-foreground">{stats.total}</span>
+                    <span className="font-medium">{stats.total}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Aktiv:</span>
                     <span className="font-medium text-success">{stats.running}</span>
                   </div>
-                  <div className="flex justify-between border-t border-border pt-2 text-sm">
+                  <div className="flex justify-between border-t pt-2 text-sm">
                     <span className="text-muted-foreground">VMs:</span>
-                    <span className="font-medium text-card-foreground">{stats.vms}</span>
+                    <span className="font-medium">{stats.vms}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Container:</span>
-                    <span className="font-medium text-card-foreground">{stats.containers}</span>
+                    <span className="font-medium">{stats.containers}</span>
                   </div>
                   <Button 
                     className="mt-3 w-full" 
@@ -214,8 +214,10 @@ const Servers = () => {
     if (!hetznerServers || hetznerServers.length === 0) {
       return (
         <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            Keine Hetzner Cloud Server gefunden
+          <CardContent className="py-12 text-center">
+            <Cloud className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+            <p className="text-muted-foreground">Keine Hetzner Cloud Server gefunden</p>
+            <p className="text-sm text-muted-foreground mt-2">Konfigurieren Sie Ihren Hetzner API Key in den Einstellungen</p>
           </CardContent>
         </Card>
       );
@@ -273,11 +275,11 @@ const Servers = () => {
         {hetznerServers.map((server) => (
           <Card 
             key={server.id} 
-            className="cursor-pointer border-border bg-card transition-all hover:shadow-[var(--shadow-glow)]"
+            className="cursor-pointer transition-all hover:shadow-[var(--shadow-glow)]"
             onClick={() => navigate(`/hetzner-server/${server.id}`)}
           >
             <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${viewMode === "compact" ? "pb-2" : "pb-2"}`}>
-              <CardTitle className={`font-semibold text-card-foreground ${viewMode === "compact" ? "text-base" : "text-lg"}`}>
+              <CardTitle className={`font-semibold ${viewMode === "compact" ? "text-base" : "text-lg"}`}>
                 {server.name}
               </CardTitle>
               {getStatusBadge(server.status)}
@@ -287,7 +289,7 @@ const Servers = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Typ:</span>
-                    <span className="font-medium text-card-foreground">{server.server_type.name}</span>
+                    <span className="font-medium">{server.server_type.name}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">CPU:</span>
@@ -297,9 +299,9 @@ const Servers = () => {
                     <span className="text-muted-foreground">RAM:</span>
                     <span className="font-medium">{server.server_type.memory} GB</span>
                   </div>
-                  <div className="flex justify-between border-t border-border pt-2 text-sm">
+                  <div className="flex justify-between border-t pt-2 text-sm">
                     <span className="text-muted-foreground">Standort:</span>
-                    <span className="font-medium text-card-foreground">{server.datacenter.location.name}</span>
+                    <span className="font-medium">{server.datacenter.location.name}</span>
                   </div>
                   {server.public_net.ipv4 && (
                     <div className="text-xs text-muted-foreground font-mono truncate">

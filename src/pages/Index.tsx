@@ -150,192 +150,108 @@ const Index = () => {
         <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
       </div>
       
-      {nodeStats && (
-        viewMode === "list" ? (
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Node</TableHead>
-                  <TableHead>Gesamt</TableHead>
-                  <TableHead>Aktiv</TableHead>
-                  <TableHead>VMs</TableHead>
-                  <TableHead>Container</TableHead>
-                  <TableHead className="text-right">Aktionen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(nodeStats).map(([node, stats]) => (
-                  <TableRow key={node} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/server/${node}`)}>
-                    <TableCell className="font-semibold">{node}</TableCell>
-                    <TableCell>{stats.total}</TableCell>
-                    <TableCell className="text-success">{stats.running}</TableCell>
-                    <TableCell>{stats.vms}</TableCell>
-                    <TableCell>{stats.containers}</TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/server/${node}`);
-                        }}
-                      >
-                        Verwalten
-                        <ChevronRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </TableCell>
+      {nodeStats && Object.entries(nodeStats).length > 0 && (
+        <>
+          {viewMode === "list" ? (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Node</TableHead>
+                    <TableHead>Gesamt</TableHead>
+                    <TableHead>Aktiv</TableHead>
+                    <TableHead>VMs</TableHead>
+                    <TableHead>Container</TableHead>
+                    <TableHead className="text-right">Aktionen</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        ) : (
-          <div className={viewMode === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "grid gap-3 md:grid-cols-2 lg:grid-cols-4"}>
-            {Object.entries(nodeStats).map(([node, stats]) => (
-              <Card 
-                key={node} 
-                className="cursor-pointer border-border bg-card transition-all hover:shadow-[var(--shadow-glow)]"
-                onClick={() => navigate(`/server/${node}`)}
-              >
-                <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${viewMode === "compact" ? "pb-2" : "pb-2"}`}>
-                  <CardTitle className={`font-semibold text-card-foreground ${viewMode === "compact" ? "text-base" : "text-lg"}`}>
-                    {node}
-                  </CardTitle>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </CardHeader>
-                <CardContent className={viewMode === "compact" ? "pb-3" : ""}>
-                  {viewMode === "grid" ? (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Gesamt:</span>
-                        <span className="font-medium text-card-foreground">{stats.total}</span>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries(nodeStats).map(([node, stats]) => (
+                    <TableRow 
+                      key={node} 
+                      className="cursor-pointer hover:bg-muted/50" 
+                      onClick={() => navigate(`/server/${node}`)}
+                    >
+                      <TableCell className="font-semibold">{node}</TableCell>
+                      <TableCell>{stats.total}</TableCell>
+                      <TableCell className="text-success">{stats.running}</TableCell>
+                      <TableCell>{stats.vms}</TableCell>
+                      <TableCell>{stats.containers}</TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/server/${node}`);
+                          }}
+                        >
+                          Verwalten
+                          <ChevronRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          ) : (
+            <div className={viewMode === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "grid gap-3 md:grid-cols-2 lg:grid-cols-4"}>
+              {Object.entries(nodeStats).map(([node, stats]) => (
+                <Card 
+                  key={node} 
+                  className="cursor-pointer transition-all hover:shadow-[var(--shadow-glow)]"
+                  onClick={() => navigate(`/server/${node}`)}
+                >
+                  <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${viewMode === "compact" ? "pb-2" : "pb-2"}`}>
+                    <CardTitle className={`font-semibold ${viewMode === "compact" ? "text-base" : "text-lg"}`}>
+                      {node}
+                    </CardTitle>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent className={viewMode === "compact" ? "pb-3" : ""}>
+                    {viewMode === "grid" ? (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Gesamt:</span>
+                          <span className="font-medium">{stats.total}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Aktiv:</span>
+                          <span className="font-medium text-success">{stats.running}</span>
+                        </div>
+                        <div className="flex justify-between border-t pt-2 text-sm">
+                          <span className="text-muted-foreground">VMs:</span>
+                          <span className="font-medium">{stats.vms}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Container:</span>
+                          <span className="font-medium">{stats.containers}</span>
+                        </div>
+                        <Button 
+                          className="mt-3 w-full" 
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/server/${node}`);
+                          }}
+                        >
+                          Server verwalten
+                        </Button>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Aktiv:</span>
-                        <span className="font-medium text-success">{stats.running}</span>
+                    ) : (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">{stats.total} Server</span>
+                        <span className="text-success">{stats.running} aktiv</span>
                       </div>
-                      <div className="flex justify-between border-t border-border pt-2 text-sm">
-                        <span className="text-muted-foreground">VMs:</span>
-                        <span className="font-medium text-card-foreground">{stats.vms}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Container:</span>
-                        <span className="font-medium text-card-foreground">{stats.containers}</span>
-                      </div>
-                      <Button 
-                        className="mt-3 w-full" 
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/server/${node}`);
-                        }}
-                      >
-                        Server verwalten
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{stats.total} Server</span>
-                      <span className="text-success">{stats.running} aktiv</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       )}
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-lg border border-border bg-card p-6">
-          <h3 className="mb-4 text-lg font-semibold text-card-foreground">
-            Letzte Aktivitäten
-          </h3>
-          <div className="space-y-4">
-            {[
-              {
-                action: "Server neu gestartet",
-                server: "web-prod-01",
-                time: "vor 2 Stunden",
-              },
-              {
-                action: "Domain erneuert",
-                server: "beispiel-domain.de",
-                time: "vor 5 Stunden",
-              },
-              {
-                action: "Backup erstellt",
-                server: "db-main-01",
-                time: "vor 8 Stunden",
-              },
-            ].map((activity, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between border-b border-border pb-3 last:border-0"
-              >
-                <div>
-                  <p className="font-medium text-card-foreground">
-                    {activity.action}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {activity.server}
-                  </p>
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  {activity.time}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-border bg-card p-6">
-          <h3 className="mb-4 text-lg font-semibold text-card-foreground">
-            System Status
-          </h3>
-          <div className="space-y-4">
-            {[
-              { name: "API Server", status: "Operational", uptime: "100%" },
-              { name: "Database", status: "Operational", uptime: "99.9%" },
-              { name: "DNS Service", status: "Operational", uptime: "100%" },
-              { name: "Mail Server", status: "Degraded", uptime: "95.2%" },
-            ].map((system, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between border-b border-border pb-3 last:border-0"
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`h-2 w-2 rounded-full ${
-                      system.status === "Operational"
-                        ? "bg-success"
-                        : "bg-warning"
-                    }`}
-                  />
-                  <span className="font-medium text-card-foreground">
-                    {system.name}
-                  </span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">
-                    {system.uptime}
-                  </span>
-                  <span
-                    className={`text-sm font-medium ${
-                      system.status === "Operational"
-                        ? "text-success"
-                        : "text-warning"
-                    }`}
-                  >
-                    {system.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        </div>
       </div>
     </>
   );
