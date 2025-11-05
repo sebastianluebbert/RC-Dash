@@ -27,10 +27,33 @@ export const dnsService = {
     return response.data.records;
   },
 
+  async manageHetznerRecord(action: 'create' | 'update' | 'delete', zoneId: string, record: any) {
+    const response = await apiClient.post('/dns/hetzner/manage', {
+      action,
+      zoneId,
+      record,
+    });
+    return response.data;
+  },
+
   // AutoDNS
   async getAutoDNSZones(): Promise<DNSZone[]> {
     const response = await apiClient.get('/dns/autodns/zones');
     return response.data.zones;
+  },
+
+  async getAutoDNSRecords(zoneName: string): Promise<DNSRecord[]> {
+    const response = await apiClient.get(`/dns/autodns/records/${zoneName}`);
+    return response.data.records;
+  },
+
+  async manageAutoDNSRecord(action: 'create' | 'update' | 'delete', zoneName: string, record: any) {
+    const response = await apiClient.post('/dns/autodns/manage', {
+      action,
+      zoneName,
+      record,
+    });
+    return response.data;
   },
 
   // Settings

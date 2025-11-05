@@ -15,6 +15,14 @@ export interface Mailbox {
   active: boolean;
 }
 
+export interface Domain {
+  domain_name: string;
+  description: string;
+  aliases: number;
+  mailboxes: number;
+  active: boolean;
+}
+
 export const mailService = {
   async getServers(): Promise<MailServer[]> {
     const response = await apiClient.get('/mail/servers');
@@ -34,6 +42,27 @@ export const mailService = {
   async getMailboxes(serverId: string): Promise<Mailbox[]> {
     const response = await apiClient.get(`/mail/servers/${serverId}/mailboxes`);
     return response.data.mailboxes;
+  },
+
+  async getDomains(serverId: string): Promise<Domain[]> {
+    const response = await apiClient.get(`/mail/servers/${serverId}/domains`);
+    return response.data.domains;
+  },
+
+  async manageMailbox(serverId: string, action: 'create' | 'update' | 'delete', mailbox: any) {
+    const response = await apiClient.post(`/mail/servers/${serverId}/mailboxes/manage`, {
+      action,
+      mailbox,
+    });
+    return response.data;
+  },
+
+  async manageDomain(serverId: string, action: 'create' | 'update' | 'delete', domain: any) {
+    const response = await apiClient.post(`/mail/servers/${serverId}/domains/manage`, {
+      action,
+      domain,
+    });
+    return response.data;
   },
 
   async testConnection(host: string, apiKey: string) {

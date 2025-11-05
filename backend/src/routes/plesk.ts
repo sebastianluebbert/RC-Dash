@@ -131,3 +131,76 @@ pleskRouter.get('/servers/:id/websites', async (req: AuthRequest, res, next) => 
     next(error);
   }
 });
+
+// Get website details
+pleskRouter.get('/servers/:serverId/websites/:siteId', async (req: AuthRequest, res, next) => {
+  try {
+    const { serverId, siteId } = req.params;
+    
+    const serverResult = await query('SELECT * FROM plesk_servers WHERE id = $1', [serverId]);
+    if (serverResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+    
+    const server = serverResult.rows[0];
+    const password = decrypt(server.password_encrypted);
+    const auth = Buffer.from(`${server.username}:${password}`).toString('base64');
+    
+    const response = await fetch(`${server.host}:${server.port}/api/v2/domains/${siteId}`, {
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      return res.status(500).json({ error: 'Plesk API error' });
+    }
+    
+    const data: any = await response.json();
+    res.json({ website: data });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get WordPress SSO URL
+pleskRouter.post('/servers/:serverId/wp-sso', async (req: AuthRequest, res, next) => {
+  try {
+    const { serverId } = req.params;
+    const { siteId } = req.body;
+    
+    if (!siteId) {
+      return res.status(400).json({ error: 'siteId is required' });
+    }
+    
+    const serverResult = await query('SELECT * FROM plesk_servers WHERE id = $1', [serverId]);
+    if (serverResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+    
+    const server = serverResult.rows[0];
+    const password = decrypt(server.password_encrypted);
+    const auth = Buffer.from(`${server.username}:${password}`).toString('base64');
+    
+    const response = await fetch(
+      `${server.host}:${server.port}/api/v2/domains/${siteId}/wordpress/sso`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    
+    if (!response.ok) {
+      return res.status(500).json({ error: 'Plesk API error' });
+    }
+    
+    const data: any = await response.json();
+    res.json({ ssoUrl: data.url });
+  } catch (error) {
+    next(error);
+  }
+});

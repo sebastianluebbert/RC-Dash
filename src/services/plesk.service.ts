@@ -42,6 +42,16 @@ export const pleskService = {
     return response.data.websites;
   },
 
+  async getWebsiteDetails(serverId: string, siteId: string) {
+    const response = await apiClient.get(`/plesk/servers/${serverId}/websites/${siteId}`);
+    return response.data.website;
+  },
+
+  async getWordPressSSOUrl(serverId: string, siteId: string) {
+    const response = await apiClient.post(`/plesk/servers/${serverId}/wp-sso`, { siteId });
+    return response.data.ssoUrl;
+  },
+
   async testConnection(host: string, username: string, password: string, port: number) {
     const response = await apiClient.post('/plesk/test-connection', {
       host,
