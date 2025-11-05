@@ -10,21 +10,47 @@ serve(async (req) => {
   }
 
   try {
-    // Get query parameters
+    // Get query parameters and auth token
     const url = new URL(req.url);
     const node = url.searchParams.get('node');
     const vmid = url.searchParams.get('vmid');
     const type = url.searchParams.get('type');
+    const authHeader = headers.get('authorization');
 
     if (!node || !vmid || !type) {
       return new Response("Missing parameters", { status: 400 });
     }
+    
+    if (!authHeader) {
+      return new Response("Authentication required", { status: 401 });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
 
     console.log(`WebSocket proxy request for ${type} ${vmid} on node ${node}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Verify the token and check admin role
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response('Invalid or expired token', { status: 401 });
+    }
+    
+    // Check admin role
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .single();
+    
+    if (roleError || !roleData) {
+      return new Response('Admin access required', { status: 403 });
+    }
 
     // Get Proxmox node configuration from database
     const { data: nodeConfig, error: nodeError } = await supabase
@@ -39,7 +65,17 @@ serve(async (req) => {
 
     const PROXMOX_HOST = nodeConfig.host;
     const PROXMOX_USERNAME = nodeConfig.username;
-    const PROXMOX_PASSWORD = nodeConfig.password;
+    
+    // Decrypt password using RPC (requires admin auth)
+    const { data: decryptedPassword, error: decryptError } = await supabase
+      .rpc('decrypt_value', { encrypted_text: nodeConfig.password_encrypted });
+    
+    if (decryptError || !decryptedPassword) {
+      console.error('Failed to decrypt password:', decryptError);
+      return new Response('Failed to decrypt node credentials', { status: 500 });
+    }
+    
+    const PROXMOX_PASSWORD = decryptedPassword;
 
     // Get auth ticket
     const authResponse = await fetch(`${PROXMOX_HOST}/api2/json/access/ticket`, {

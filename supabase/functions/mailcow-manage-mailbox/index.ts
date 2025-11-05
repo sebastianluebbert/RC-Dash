@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateAdmin } from '../_shared/auth.ts';
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
@@ -10,6 +11,12 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Authenticate and authorize admin
+  const authResult = await authenticateAdmin(req, corsHeaders);
+  if (!authResult.success) {
+    return authResult.response;
   }
 
   try {
@@ -80,10 +87,19 @@ serve(async (req) => {
       body = [mailbox.username];
     }
 
+    // Get decrypted API key
+    const { data: decryptedApiKey, error: decryptError } = await supabase
+      .rpc('decrypt_value', { encrypted_text: server.api_key_encrypted });
+    
+    if (decryptError || !decryptedApiKey) {
+      console.error('Failed to decrypt API key:', decryptError);
+      throw new Error('Failed to decrypt server credentials');
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'X-API-Key': server.api_key,
+        'X-API-Key': decryptedApiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),

@@ -19,7 +19,6 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
-          is_encrypted: boolean | null
           key: string
           updated_at: string
           value: Json
@@ -29,7 +28,6 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
-          is_encrypted?: boolean | null
           key: string
           updated_at?: string
           value: Json
@@ -39,7 +37,6 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
-          is_encrypted?: boolean | null
           key?: string
           updated_at?: string
           value?: Json
@@ -76,34 +73,28 @@ export type Database = {
       }
       mailcow_servers: {
         Row: {
-          api_key: string
           api_key_encrypted: string | null
           created_at: string
           host: string
           id: string
-          is_encrypted: boolean | null
           name: string
           updated_at: string
           verify_ssl: boolean
         }
         Insert: {
-          api_key: string
           api_key_encrypted?: string | null
           created_at?: string
           host: string
           id?: string
-          is_encrypted?: boolean | null
           name: string
           updated_at?: string
           verify_ssl?: boolean
         }
         Update: {
-          api_key?: string
           api_key_encrypted?: string | null
           created_at?: string
           host?: string
           id?: string
-          is_encrypted?: boolean | null
           name?: string
           updated_at?: string
           verify_ssl?: boolean
@@ -116,9 +107,7 @@ export type Database = {
           customer_id: string | null
           host: string
           id: string
-          is_encrypted: boolean | null
           name: string
-          password: string
           password_encrypted: string | null
           port: number
           updated_at: string
@@ -130,9 +119,7 @@ export type Database = {
           customer_id?: string | null
           host: string
           id?: string
-          is_encrypted?: boolean | null
           name: string
-          password: string
           password_encrypted?: string | null
           port?: number
           updated_at?: string
@@ -144,9 +131,7 @@ export type Database = {
           customer_id?: string | null
           host?: string
           id?: string
-          is_encrypted?: boolean | null
           name?: string
-          password?: string
           password_encrypted?: string | null
           port?: number
           updated_at?: string
@@ -189,9 +174,7 @@ export type Database = {
           created_at: string
           host: string
           id: string
-          is_encrypted: boolean | null
           name: string
-          password: string
           password_encrypted: string | null
           port: number
           realm: string
@@ -203,9 +186,7 @@ export type Database = {
           created_at?: string
           host: string
           id?: string
-          is_encrypted?: boolean | null
           name: string
-          password?: string
           password_encrypted?: string | null
           port?: number
           realm?: string
@@ -217,9 +198,7 @@ export type Database = {
           created_at?: string
           host?: string
           id?: string
-          is_encrypted?: boolean | null
           name?: string
-          password?: string
           password_encrypted?: string | null
           port?: number
           realm?: string

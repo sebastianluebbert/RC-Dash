@@ -1,22 +1,49 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateAdmin } from '../_shared/auth.ts';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// CRITICAL SECURITY: Whitelist of allowed script domains
+const ALLOWED_SCRIPT_DOMAINS = [
+  'raw.githubusercontent.com',
+  'gist.githubusercontent.com',
+];
+
+const requestSchema = z.object({
+  node: z.string().min(1).max(50).regex(/^[a-zA-Z0-9-_.]+$/),
+  scriptUrl: z.string().url().refine(
+    (url) => {
+      try {
+        const domain = new URL(url).hostname;
+        return ALLOWED_SCRIPT_DOMAINS.includes(domain);
+      } catch {
+        return false;
+      }
+    },
+    { message: `Script URL must be from allowed domains: ${ALLOWED_SCRIPT_DOMAINS.join(', ')}` }
+  ),
+  scriptName: z.string().min(1).max(100),
+});
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const { node, scriptUrl, scriptName } = await req.json();
+  // Authenticate and authorize admin
+  const authResult = await authenticateAdmin(req, corsHeaders);
+  if (!authResult.success) {
+    return authResult.response;
+  }
 
-    if (!node || !scriptUrl) {
-      throw new Error('Missing required parameters: node, scriptUrl');
-    }
+  try {
+    const body = await req.json();
+    const { node, scriptUrl, scriptName } = requestSchema.parse(body);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -37,7 +64,17 @@ serve(async (req) => {
 
     const PROXMOX_HOST = nodeConfig.host;
     const PROXMOX_USERNAME = nodeConfig.username;
-    const PROXMOX_PASSWORD = nodeConfig.password;
+    
+    // Decrypt password using RPC (requires admin auth)
+    const { data: decryptedPassword, error: decryptError } = await supabase
+      .rpc('decrypt_value', { encrypted_text: nodeConfig.password_encrypted });
+    
+    if (decryptError || !decryptedPassword) {
+      console.error('Failed to decrypt password:', decryptError);
+      throw new Error('Failed to decrypt node credentials');
+    }
+    
+    const PROXMOX_PASSWORD = decryptedPassword;
 
     console.log(`Executing helper script ${scriptName} on node ${node}`);
 

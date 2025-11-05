@@ -1,4 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateAdmin } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,8 +12,27 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Authenticate and authorize admin
+  const authResult = await authenticateAdmin(req, corsHeaders);
+  if (!authResult.success) {
+    return authResult.response;
+  }
+
   try {
-    const HETZNER_API_KEY = Deno.env.get('HETZNER_API_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Get Hetzner API key from database
+    const { data: settings, error: settingsError } = await supabase
+      .from('application_settings')
+      .select('value')
+      .eq('key', 'hetzner_api_key')
+      .maybeSingle();
+
+    if (settingsError) throw settingsError;
+    
+    const HETZNER_API_KEY = settings?.value as string;
     
     if (!HETZNER_API_KEY) {
       throw new Error('HETZNER_API_KEY is not configured');

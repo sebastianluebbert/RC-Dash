@@ -1,17 +1,32 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateAdmin } from '../_shared/auth.ts';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const requestSchema = z.object({
+  zoneId: z.string().min(1),
+});
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Authenticate and authorize admin
+  const authResult = await authenticateAdmin(req, corsHeaders);
+  if (!authResult.success) {
+    return authResult.response;
+  }
+
   try {
+    const body = await req.json();
+    const { zoneId } = requestSchema.parse(body);
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -29,12 +44,6 @@ serve(async (req) => {
     
     if (!hetznerApiKey) {
       throw new Error('Hetzner API Key nicht konfiguriert. Bitte in den Einstellungen hinterlegen.');
-    }
-
-    const { zoneId } = await req.json();
-
-    if (!zoneId) {
-      throw new Error('zoneId is required');
     }
 
     console.log(`Fetching DNS records for zone: ${zoneId}`);

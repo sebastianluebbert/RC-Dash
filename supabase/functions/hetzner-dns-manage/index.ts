@@ -1,17 +1,39 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateAdmin } from '../_shared/auth.ts';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const requestSchema = z.object({
+  action: z.enum(['create', 'update', 'delete']),
+  zoneId: z.string().min(1),
+  rrsetId: z.string().optional(),
+  record: z.object({
+    name: z.string(),
+    type: z.string(),
+    ttl: z.number().positive().optional(),
+    value: z.string(),
+  }).optional(),
+});
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Authenticate and authorize admin
+  const authResult = await authenticateAdmin(req, corsHeaders);
+  if (!authResult.success) {
+    return authResult.response;
+  }
+
   try {
+    const body = await req.json();
+    const { action, zoneId, rrsetId, record } = requestSchema.parse(body);
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -31,11 +53,6 @@ serve(async (req) => {
       throw new Error('Hetzner API Key nicht konfiguriert. Bitte in den Einstellungen hinterlegen.');
     }
 
-    const { action, zoneId, rrsetId, record } = await req.json();
-
-    if (!action || !zoneId) {
-      throw new Error('action and zoneId are required');
-    }
 
     const headers = {
       'Authorization': `Bearer ${hetznerApiKey}`,
@@ -46,6 +63,9 @@ serve(async (req) => {
 
     switch (action) {
       case 'create':
+        if (!record) {
+          throw new Error('record is required for create action');
+        }
         console.log(`Creating RRSet in zone: ${zoneId}`);
         response = await fetch(`https://api.hetzner.cloud/v1/zones/${zoneId}/rrsets`, {
           method: 'POST',
@@ -66,6 +86,9 @@ serve(async (req) => {
       case 'update':
         if (!rrsetId) {
           throw new Error('rrsetId is required for update action');
+        }
+        if (!record) {
+          throw new Error('record is required for update action');
         }
         console.log(`Updating RRSet: ${rrsetId}`);
         response = await fetch(`https://api.hetzner.cloud/v1/zones/${zoneId}/rrsets/${rrsetId}`, {
