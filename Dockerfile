@@ -8,10 +8,11 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install --legacy-peer-deps
 
-# Copy source code
+# Copy environment file and source code
+COPY .env .env
 COPY . .
 
-# Build application
+# Build application with environment variables
 RUN npm run build
 
 # Production image with nginx
